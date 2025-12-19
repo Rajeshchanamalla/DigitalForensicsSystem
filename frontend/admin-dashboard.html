@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard - Digital Forensics</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-container">
+      <h3>🔒 Digital Forensic System</h3>
+      <div class="nav-links">
+        <a href="admin-dashboard.html" class="active">Dashboard</a>
+        <a href="user-management.html">User Management</a>
+        <a href="login-logs.html">Login Logs</a>
+        <a href="#" onclick="logout()">Logout</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="dashboard-header">
+      <h1>👤 Admin Dashboard</h1>
+      <div id="userInfo" class="user-info"></div>
+    </div>
+
+    <div class="dashboard-grid">
+      <div class="dashboard-card">
+        <h3>👥 User Management</h3>
+        <p>Manage user roles and system access</p>
+        <a href="user-management.html" class="btn-primary">Manage Users</a>
+      </div>
+
+      <div class="dashboard-card">
+        <h3> Login Logs Database</h3>
+        <p>View all login attempts with timestamps</p>
+        <a href="login-logs.html" class="btn-primary">View Login Logs</a>
+      </div>
+
+      <div class="dashboard-card">
+        <h3>System Overview</h3>
+        <p id="systemOverview">Loading system information...</p>
+        <button onclick="loadSystemOverview()" class="btn-secondary">Refresh</button>
+      </div>
+
+      <div class="dashboard-card">
+        <h3>⚙️ System Configuration</h3>
+        <p>System settings and configuration</p>
+        <p class="info">All evidence stored securely in system storage</p>
+      </div>
+    </div>
+
+    <div class="admin-section">
+      <h2>System Statistics</h2>
+      <div id="statistics" class="stats-grid">
+        <div class="stat-card">
+          <h3>Total Evidence</h3>
+          <p id="totalEvidence">-</p>
+        </div>
+        <div class="stat-card">
+          <h3>Active Users</h3>
+          <p id="activeUsers">-</p>
+        </div>
+        <div class="stat-card">
+          <h3>System Status</h3>
+          <p id="systemStatus">-</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+  <script>
+    function loadSystemOverview() {
+      const overviewDiv = document.getElementById('systemOverview');
+      const count = getEvidenceCount();
+      const users = Object.keys(UserManagement.getAllUsers()).length;
+      overviewDiv.innerHTML = `
+        <p><strong>Total Evidence Records:</strong> ${count}</p>
+        <p><strong>Registered Users:</strong> ${users}</p>
+        <p><strong>Storage:</strong> Local Storage</p>
+      `;
+    }
+
+    function loadStatistics() {
+      const count = getEvidenceCount();
+      document.getElementById('totalEvidence').textContent = count;
+      document.getElementById('activeUsers').textContent = Object.keys(UserManagement.getAllUsers()).length;
+      document.getElementById('systemStatus').innerHTML = '<span class="success">✓ Operational</span>';
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      loadSystemOverview();
+      loadStatistics();
+    });
+  </script>
+</body>
+</html>
+

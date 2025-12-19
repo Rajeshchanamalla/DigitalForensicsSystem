@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Court Dashboard - Digital Forensics</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-container">
+      <h3>🔒 Digital Forensic System</h3>
+      <div class="nav-links">
+        <a href="court-dashboard.html" class="active">Dashboard</a>
+        <a href="verify-evidence.html">Verify Evidence</a>
+        <a href="#" onclick="logout()">Logout</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="dashboard-header">
+      <h1>⚖️ Court Dashboard</h1>
+      <div id="userInfo" class="user-info"></div>
+    </div>
+
+    <div class="dashboard-grid">
+      <div class="dashboard-card">
+        <h3>🔍 Verify Chain of Custody</h3>
+        <p>Verify the authenticity and chain of custody of evidence using blockchain records</p>
+        <a href="verify-evidence.html" class="btn-primary">Verify Evidence</a>
+      </div>
+
+      <div class="dashboard-card">
+        <h3>📋 View Case Evidence</h3>
+        <p>Retrieve evidence records for specific cases</p>
+        <div class="search-box">
+          <input type="text" id="caseSearch" placeholder="Enter Case ID">
+          <button onclick="searchCase()" class="btn-secondary">Search</button>
+        </div>
+      </div>
+
+      <div class="dashboard-card">
+        <h3>📊 System Status</h3>
+        <p id="systemStatus">Checking system status...</p>
+        <button onclick="checkSystemStatus()" class="btn-secondary">Refresh</button>
+      </div>
+    </div>
+
+    <div class="evidence-list-section">
+      <h2>Case Evidence Records</h2>
+      <div id="evidenceList" class="evidence-list">
+        <p class="info">Enter a Case ID to search for evidence records</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+  <script>
+    function searchCase() {
+      const caseId = document.getElementById('caseSearch').value.trim();
+      const listDiv = document.getElementById('evidenceList');
+
+      if (!caseId) {
+        listDiv.innerHTML = '<p class="error">Please enter a Case ID</p>';
+        return;
+      }
+
+      listDiv.innerHTML = '<p class="info">Searching for evidence...</p>';
+
+      try {
+        const evidences = BlockchainStorage.getEvidenceByCaseId(caseId);
+        
+        if (evidences.length === 0) {
+          listDiv.innerHTML = '<p class="info">No evidence found for this Case ID</p>';
+          return;
+        }
+
+        let html = '<table class="evidence-table"><thead><tr><th>Index</th><th>Case ID</th><th>Hash</th><th>IPFS CID</th><th>Investigator</th><th>Timestamp</th></tr></thead><tbody>';
+        
+        evidences.forEach(evidence => {
+          html += `
+            <tr>
+              <td>${evidence.index}</td>
+              <td><strong>${evidence.caseId}</strong></td>
+              <td class="hash-cell">${evidence.evidenceHash}</td>
+              <td class="hash-cell">${evidence.ipfsCID}</td>
+              <td class="address-cell">${evidence.investigator}</td>
+              <td>${new Date(evidence.timestamp).toLocaleString()}</td>
+            </tr>
+          `;
+        });
+        
+        html += '</tbody></table>';
+        listDiv.innerHTML = html;
+      } catch (error) {
+        listDiv.innerHTML = `<p class="error">Error searching evidence: ${error.message}</p>`;
+      }
+    }
+
+    function checkSystemStatus() {
+      const statusDiv = document.getElementById('systemStatus');
+      const count = getEvidenceCount();
+      statusDiv.innerHTML = `
+        <p class="success">✓ System Operational</p>
+        <p><strong>Total Evidence Records:</strong> ${count}</p>
+      `;
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      checkSystemStatus();
+    });
+  </script>
+</body>
+</html>
+

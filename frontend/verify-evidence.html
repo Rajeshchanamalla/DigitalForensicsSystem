@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verify Evidence - Digital Forensics</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-container">
+      <h3>🔒 Digital Forensic System</h3>
+      <div class="nav-links">
+        <a href="#" onclick="goBack()">Back</a>
+        <a href="#" onclick="logout()">Logout</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="page-header">
+      <h1>🔍 Verify Evidence Integrity</h1>
+      <p class="subtitle">Verify evidence integrity by comparing recomputed hash with blockchain record</p>
+    </div>
+
+    <div class="verify-form">
+      <div class="form-group">
+        <label for="evidenceIndex">Evidence Index</label>
+        <input type="number" id="evidenceIndex" placeholder="Enter evidence index (0-based)" min="0">
+        <button onclick="loadEvidenceFromStorage()" class="btn-secondary">Load Evidence</button>
+      </div>
+
+      <div id="blockchainEvidence" class="evidence-display" style="display: none;">
+        <h3>Evidence Record</h3>
+        <div class="evidence-details">
+          <p><strong>Case ID:</strong> <span id="bcCaseId"></span></p>
+          <p><strong>Stored Hash:</strong> <span id="bcHash" class="hash-display"></span></p>
+          <p><strong>IPFS CID:</strong> <span id="bcIPFS" class="hash-display"></span></p>
+          <p><strong>IPFS Link:</strong> <a id="ipfsLink" href="#" target="_blank" class="hash-display">View File on IPFS</a></p>
+          <p><strong>Investigator:</strong> <span id="bcInvestigator" class="address-display"></span></p>
+          <p><strong>Timestamp:</strong> <span id="bcTimestamp"></span></p>
+          <button onclick="downloadFromIPFS()" class="btn-secondary" style="margin-top: 10px;">Download File from IPFS</button>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="form-group">
+        <label for="verifyFileInput">Upload Evidence File for Verification</label>
+        <input type="file" id="verifyFileInput" accept="*/*">
+        <button onclick="verifyFileIntegrity()" class="btn-primary">Verify Integrity</button>
+      </div>
+
+      <div id="verificationResult" class="verification-result" style="display: none;">
+        <h3>Verification Result</h3>
+        <div id="verificationDetails"></div>
+      </div>
+
+      <div class="manual-verify">
+        <h3>Manual Hash Comparison</h3>
+        <div class="form-group">
+          <label for="storedHash">Stored Hash (from Storage)</label>
+          <input type="text" id="storedHash" placeholder="Paste stored hash">
+        </div>
+        <div class="form-group">
+          <label for="computedHash">Computed Hash (from File)</label>
+          <input type="text" id="computedHash" placeholder="Paste computed hash">
+        </div>
+        <button onclick="compareHashes()" class="btn-secondary">Compare Hashes</button>
+        <div id="comparisonResult"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+  <script>
+    let currentBlockchainEvidence = null;
+
+    function loadEvidenceFromStorage() {
+      const index = parseInt(document.getElementById('evidenceIndex').value);
+      const evidenceDiv = document.getElementById('blockchainEvidence');
+
+      if (isNaN(index) || index < 0) {
+        alert('Please enter a valid evidence index');
+        return;
+      }
+
+      try {
+        const evidence = retrieveEvidence(index);
+        currentBlockchainEvidence = evidence;
+
+        document.getElementById('bcCaseId').textContent = evidence.caseId;
+        document.getElementById('bcHash').textContent = evidence.evidenceHash;
+        document.getElementById('bcIPFS').textContent = evidence.ipfsCID;
+        const ipfsLink = document.getElementById('ipfsLink');
+        if (ipfsLink) {
+          const isLocalIPFS = CONFIG.IPFS.API_URL.includes('localhost') || CONFIG.IPFS.API_URL.includes('127.0.0.1');
+          if (isLocalIPFS) {
+            ipfsLink.href = 'ipfs://' + evidence.ipfsCID;
+            ipfsLink.textContent = 'Open in IPFS Desktop (' + evidence.ipfsCID.substring(0, 16) + '...)';
+            ipfsLink.onclick = function(e) {
+              e.preventDefault();
+              // Try ipfs:// protocol first
+              window.location.href = 'ipfs://' + evidence.ipfsCID;
+              // Fallback: open gateway
+              setTimeout(() => {
+                window.open(CONFIG.IPFS.GATEWAY + evidence.ipfsCID, '_blank');
+              }, 500);
+            };
+          } else {
+            ipfsLink.href = CONFIG.IPFS.GATEWAY + evidence.ipfsCID;
+            ipfsLink.textContent = 'View File on IPFS (' + evidence.ipfsCID.substring(0, 16) + '...)';
+          }
+        }
+        document.getElementById('bcInvestigator').textContent = evidence.investigator;
+        document.getElementById('bcTimestamp').textContent = evidence.timestamp;
+        document.getElementById('storedHash').value = evidence.evidenceHash;
+        
+        // Store CID for download function
+        window.currentIPFSCID = evidence.ipfsCID;
+
+        evidenceDiv.style.display = 'block';
+      } catch (error) {
+        alert('Error loading evidence: ' + error.message);
+      }
+    }
+
+    async function verifyFileIntegrity() {
+      const fileInput = document.getElementById('verifyFileInput');
+      const file = fileInput.files[0];
+      const resultDiv = document.getElementById('verificationResult');
+      const detailsDiv = document.getElementById('verificationDetails');
+
+      if (!file) {
+        alert('Please select a file to verify');
+        return;
+      }
+
+      if (!currentBlockchainEvidence) {
+        alert('Please load evidence first');
+        return;
+      }
+
+      try {
+        detailsDiv.innerHTML = '<p class="info">Computing hash...</p>';
+        resultDiv.style.display = 'block';
+
+        const verification = await verifyEvidence(file, currentBlockchainEvidence.evidenceHash);
+
+        let resultHTML = `
+          <div class="verification-details">
+            <p><strong>File Name:</strong> ${file.name}</p>
+            <p><strong>File Size:</strong> ${formatFileSize(file.size)}</p>
+            <p><strong>Computed Hash:</strong> <span class="hash-display">${verification.computedHash}</span></p>
+            <p><strong>Stored Hash:</strong> <span class="hash-display">${verification.storedHash}</span></p>
+            <div class="verification-status ${verification.isValid ? 'valid' : 'invalid'}">
+              <h3>${verification.isValid ? '✓ VALID' : '✗ INVALID'}</h3>
+              <p>${verification.isValid ? 'Evidence integrity verified. File matches stored record.' : 'Evidence integrity check failed. File may have been tampered with.'}</p>
+            </div>
+          </div>
+        `;
+
+        detailsDiv.innerHTML = resultHTML;
+        document.getElementById('computedHash').value = verification.computedHash;
+      } catch (error) {
+        detailsDiv.innerHTML = `<p class="error">Error: ${error.message}</p>`;
+      }
+    }
+
+    function compareHashes() {
+      const stored = document.getElementById('storedHash').value.trim().toLowerCase();
+      const computed = document.getElementById('computedHash').value.trim().toLowerCase();
+      const resultDiv = document.getElementById('comparisonResult');
+
+      if (!stored || !computed) {
+        resultDiv.innerHTML = '<p class="error">Please enter both hashes</p>';
+        return;
+      }
+
+      const isValid = stored === computed;
+      resultDiv.innerHTML = `
+        <div class="verification-status ${isValid ? 'valid' : 'invalid'}">
+          <h3>${isValid ? '✓ HASHES MATCH' : '✗ HASHES DO NOT MATCH'}</h3>
+          <p>${isValid ? 'Evidence integrity verified.' : 'Evidence may have been tampered with.'}</p>
+        </div>
+      `;
+    }
+
+    async function downloadFromIPFS() {
+      if (!window.currentIPFSCID) {
+        alert('Please load evidence first');
+        return;
+      }
+
+      try {
+        const statusDiv = document.getElementById('verificationDetails') || document.body;
+        statusDiv.innerHTML = '<p class="info">Downloading file from IPFS...</p>';
+
+        const blob = await retrieveFileFromIPFS(window.currentIPFSCID);
+        
+        // Create download link
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `evidence_${window.currentIPFSCID.substring(0, 10)}.bin`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        
+        alert('File downloaded successfully from IPFS!');
+      } catch (error) {
+        alert('Error downloading file: ' + error.message);
+        console.error('Download error:', error);
+      }
+    }
+
+    function formatFileSize(bytes) {
+      if (bytes === 0) return '0 Bytes';
+      const k = 1024;
+      const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+    }
+
+    function goBack() {
+      const user = Session.getCurrentUser();
+      if (user) {
+        switch(user.role) {
+          case 'analyst':
+            window.location.href = 'analyst-dashboard.html';
+            break;
+          case 'court':
+            window.location.href = 'court-dashboard.html';
+            break;
+          default:
+            window.location.href = 'login.html';
+        }
+      } else {
+        window.location.href = 'login.html';
+      }
+    }
+  </script>
+</body>
+</html>
+

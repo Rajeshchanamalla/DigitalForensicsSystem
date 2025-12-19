@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User Management - Digital Forensics</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-container">
+      <h3>🔒 Digital Forensic System</h3>
+      <div class="nav-links">
+        <a href="admin-dashboard.html">Dashboard</a>
+        <a href="user-management.html" class="active">User Management</a>
+        <a href="#" onclick="logout()">Logout</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="page-header">
+      <h1>👥 User Management</h1>
+      <p class="subtitle">Manage user roles and system access</p>
+    </div>
+
+    <div class="user-management">
+      <div class="add-user-section">
+        <h2>Add New User</h2>
+        <div class="form-group">
+          <label for="newUserId">User ID</label>
+          <input type="text" id="newUserId" placeholder="Enter user ID">
+        </div>
+        <div class="form-group">
+          <label for="newUserPassword">Password</label>
+          <input type="password" id="newUserPassword" placeholder="Enter password">
+        </div>
+        <div class="form-group">
+          <label for="newUserRole">Role</label>
+          <select id="newUserRole">
+            <option value="investigator">Investigator</option>
+            <option value="analyst">Analyst</option>
+            <option value="court">Court</option>
+          </select>
+          <small style="color: #9ca3af; display: block; margin-top: 5px;">Note: Admin users can only be created manually in config.js</small>
+        </div>
+        <button onclick="addUser()" class="btn-primary">Add User</button>
+      </div>
+
+      <div class="users-list-section">
+        <h2>Registered Users</h2>
+        <div id="usersList" class="users-list">
+          <p class="info">Loading users...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+  <script>
+    async function loadUsers() {
+      const usersListDiv = document.getElementById('usersList');
+      usersListDiv.innerHTML = '<p class="info">Loading users from database...</p>';
+
+      try {
+        const users = await UserManagement.getAllUsers();
+
+        if (Object.keys(users).length === 0) {
+          usersListDiv.innerHTML = '<p class="info">No users registered in database</p>';
+          return;
+        }
+
+        let html = '<table class="users-table"><thead><tr><th>User ID</th><th>Role</th><th>Type</th><th>Created At</th><th>Actions</th></tr></thead><tbody>';
+        
+        // Sort users: default first, then by creation date
+        const usersArray = Object.keys(users).map(userId => ({
+          userId,
+          ...users[userId]
+        })).sort((a, b) => {
+          if (a.isDefault !== b.isDefault) return b.isDefault - a.isDefault;
+          return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+        });
+
+        usersArray.forEach(user => {
+          const userType = user.isDefault ? 'Default' : 'Added';
+          const typeColor = user.isDefault ? '#60a5fa' : '#10b981';
+          const createdAt = user.createdAt ? new Date(user.createdAt).toLocaleString() : 'N/A';
+          
+          html += `
+            <tr>
+              <td><strong>${user.userId}</strong></td>
+              <td><span class="role-badge ${user.role}">${user.role.charAt(0).toUpperCase() + user.role.slice(1)}</span></td>
+              <td><span style="color: ${typeColor}; font-weight: bold;">${userType}</span></td>
+              <td>${createdAt}</td>
+              <td>
+                ${user.isDefault ? 
+                  '<span style="color: #9ca3af;">Cannot delete</span>' : 
+                  `<button onclick="deleteUser('${user.userId}')" class="btn-danger">Delete</button>`
+                }
+              </td>
+            </tr>
+          `;
+        });
+        
+        html += '</tbody></table>';
+        usersListDiv.innerHTML = html;
+      } catch (error) {
+        usersListDiv.innerHTML = `<div class="error">
+          <h3>❌ Error Loading Users</h3>
+          <p>${error.message}</p>
+          <p><strong>Please make sure:</strong></p>
+          <ul style="text-align: left; display: inline-block;">
+            <li>Backend server is running: <code>npm run backend</code></li>
+            <li>MySQL database is running</li>
+            <li>Users table exists in database</li>
+          </ul>
+        </div>`;
+        console.error('Error loading users:', error);
+      }
+    }
+
+    async function addUser() {
+      const userId = document.getElementById('newUserId').value.trim();
+      const password = document.getElementById('newUserPassword').value;
+      const role = document.getElementById('newUserRole').value;
+
+      if (!userId || !password || !role) {
+        alert('Please fill all fields');
+        return;
+      }
+
+      // Validate password length
+      if (password.length < 4) {
+        alert('Password must be at least 4 characters long');
+        return;
+      }
+
+      try {
+        // Check if user already exists
+        const exists = await UserManagement.userExists(userId);
+        if (exists) {
+          alert('User already exists');
+          return;
+        }
+
+        // Add user to database
+        await UserManagement.addUser(userId, password, role);
+        
+        // Clear form
+        document.getElementById('newUserId').value = '';
+        document.getElementById('newUserPassword').value = '';
+        document.getElementById('newUserRole').value = 'investigator';
+        
+        // Reload users list
+        await loadUsers();
+        alert('User added successfully to database!');
+      } catch (error) {
+        alert('Error adding user: ' + error.message);
+        console.error('Error adding user:', error);
+      }
+    }
+
+    async function deleteUser(userId) {
+      // Prevent deleting the current admin user
+      const currentUser = Session.getCurrentUser();
+      if (currentUser && currentUser.userId === userId) {
+        alert('Cannot delete your own account while logged in');
+        return;
+      }
+
+      if (confirm(`Are you sure you want to delete user "${userId}"?\n\nThis action cannot be undone.`)) {
+        try {
+          await UserManagement.deleteUser(userId);
+          await loadUsers();
+          alert('User deleted successfully from database!');
+        } catch (error) {
+          alert('Error deleting user: ' + error.message);
+          console.error('Error deleting user:', error);
+        }
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', async function() {
+      await loadUsers();
+    });
+  </script>
+</body>
+</html>
+

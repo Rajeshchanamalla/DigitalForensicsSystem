@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - Digital Forensic Evidence Management</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <div class="login-header">
+      <h1>🔒 Digital Forensic Evidence Management</h1>
+      <p class="subtitle">Digital Forensic Evidence Management System</p>
+    </div>
+
+    <div class="login-form">
+      <h2>User Login</h2>
+      
+      <div class="form-group">
+        <label for="userid">User ID</label>
+        <input type="text" id="userid" placeholder="Enter your user ID" autocomplete="username">
+      </div>
+
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" placeholder="Enter your password" autocomplete="current-password">
+      </div>
+
+      <div class="form-group">
+        <label for="role">Select Role</label>
+        <select id="role" class="role-select">
+          <option value="">-- Select Role --</option>
+          <option value="investigator"> Investigator</option>
+          <option value="analyst"> Analyst</option>
+          <option value="court"> Court</option>
+          <option value="admin"> Admin</option>
+        </select>
+      </div>
+
+      <button onclick="login()" class="btn-primary">Login</button>
+
+      <p id="error" class="error-message"></p>
+
+      <div class="demo-info">
+        <p><strong>Demo Credentials:</strong></p>
+        <ul>
+          <li>Investigator: investigator1 / invest123</li>
+          <li>Analyst: analyst1 / analyst123</li>
+          <li>Court: court1 / court123</li>
+          <li>Admin: admin1 / admin123</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="database.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

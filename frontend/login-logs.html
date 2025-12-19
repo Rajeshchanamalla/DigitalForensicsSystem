@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login Logs - Admin Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-container">
+      <h3>🔒 Digital Forensic System</h3>
+      <div class="nav-links">
+        <a href="admin-dashboard.html">Dashboard</a>
+        <a href="user-management.html">User Management</a>
+        <a href="login-logs.html" class="active">Login Logs</a>
+        <a href="#" onclick="logout()">Logout</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="page-header">
+      <h1>📋 Login Logs Database</h1>
+      <p class="subtitle">View all login attempts with timestamps and details</p>
+    </div>
+
+    <div class="admin-section">
+      <div class="dashboard-grid" style="margin-bottom: 30px;">
+        <div class="stat-card">
+          <h3>Total Logins</h3>
+          <p id="totalLogins">-</p>
+        </div>
+        <div class="stat-card">
+          <h3>Successful</h3>
+          <p id="successfulLogins" style="color: #10b981;">-</p>
+        </div>
+        <div class="stat-card">
+          <h3>Failed</h3>
+          <p id="failedLogins" style="color: #f87171;">-</p>
+        </div>
+        <div class="stat-card">
+          <h3>Unique Users</h3>
+          <p id="uniqueUsers">-</p>
+        </div>
+      </div>
+
+      <div style="margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
+        <button onclick="loadAllLogs()" class="btn-primary">📋 All Logs</button>
+        <button onclick="loadSuccessfulLogs()" class="btn-secondary">✅ Successful Only</button>
+        <button onclick="loadFailedLogs()" class="btn-secondary">❌ Failed Only</button>
+        <button onclick="loadStatistics()" class="btn-secondary">📊 Statistics</button>
+        <button onclick="exportLogs()" class="btn-secondary">💾 Export CSV</button>
+        <button onclick="clearAllLogs()" class="btn-danger">🗑️ Clear All Logs</button>
+      </div>
+
+      <div style="margin-bottom: 20px;">
+        <div class="form-group" style="max-width: 400px;">
+          <label for="filterUserId">Filter by User ID:</label>
+          <div class="search-box">
+            <input type="text" id="filterUserId" placeholder="Enter user ID">
+            <button onclick="filterByUser()" class="btn-secondary">Search</button>
+            <button onclick="clearFilter()" class="btn-secondary">Clear</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="logsTableContainer">
+        <div class="info">Loading login logs from database...</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="database.js"></script>
+  <script src="app.js"></script>
+  <script>
+    let currentLogs = [];
+
+    // Check if user is admin
+    function checkAdminAccess() {
+      const user = Session.getCurrentUser();
+      if (!user || user.role !== 'admin') {
+        alert('Access denied! Only administrators can view login logs.');
+        window.location.href = 'login.html';
+        return false;
+      }
+      return true;
+    }
+
+    // Load all logs
+    async function loadAllLogs() {
+      if (!checkAdminAccess()) return;
+      
+      const container = document.getElementById('logsTableContainer');
+      container.innerHTML = '<div class="info">Loading logs from database...</div>';
+
+      try {
+        const logs = await Database.getAllLogs();
+        currentLogs = logs;
+        displayLogs(logs, 'All Login Logs');
+        await loadStatistics();
+      } catch (error) {
+        container.innerHTML = `<div class="error">Error loading logs: ${error.message}</div>`;
+        console.error('Error loading logs:', error);
+      }
+    }
+
+    // Load successful logs
+    async function loadSuccessfulLogs() {
+      if (!checkAdminAccess()) return;
+      
+      const container = document.getElementById('logsTableContainer');
+      container.innerHTML = '<div class="info">Loading successful logins...</div>';
+
+      try {
+        const logs = await Database.getSuccessfulLogins();
+        currentLogs = logs;
+        displayLogs(logs, 'Successful Logins Only');
+        await loadStatistics();
+      } catch (error) {
+        container.innerHTML = `<div class="error">Error loading logs: ${error.message}</div>`;
+      }
+    }
+
+    // Load failed logs
+    async function loadFailedLogs() {
+      if (!checkAdminAccess()) return;
+      
+      const container = document.getElementById('logsTableContainer');
+      container.innerHTML = '<div class="info">Loading failed logins...</div>';
+
+      try {
+        const logs = await Database.getFailedLogins();
+        currentLogs = logs;
+        displayLogs(logs, 'Failed Logins Only');
+        await loadStatistics();
+      } catch (error) {
+        container.innerHTML = `<div class="error">Error loading logs: ${error.message}</div>`;
+      }
+    }
+
+    // Filter by user ID
+    async function filterByUser() {
+      if (!checkAdminAccess()) return;
+      
+      const userId = document.getElementById('filterUserId').value.trim();
+      if (!userId) {
+        alert('Please enter a user ID');
+        return;
+      }
+
+      const container = document.getElementById('logsTableContainer');
+      container.innerHTML = '<div class="info">Loading logs for user...</div>';
+
+      try {
+        const logs = await Database.getLogsByUser(userId);
+        currentLogs = logs;
+        displayLogs(logs, `Login Logs for User: ${userId}`);
+        await loadStatistics();
+      } catch (error) {
+        container.innerHTML = `<div class="error">Error loading logs: ${error.message}</div>`;
+      }
+    }
+
+    // Clear filter
+    function clearFilter() {
+      document.getElementById('filterUserId').value = '';
+      loadAllLogs();
+    }
+
+    // Display logs in table
+    function displayLogs(logs, title) {
+      const container = document.getElementById('logsTableContainer');
+
+      if (logs.length === 0) {
+        container.innerHTML = `<div class="info">No logs found.</div>`;
+        return;
+      }
+
+      let html = `<h2 style="margin-bottom: 20px; color: #60a5fa;">${title} (${logs.length} entries)</h2>`;
+      html += '<div style="overflow-x: auto;">';
+      html += '<table class="evidence-table">';
+      html += '<thead><tr>';
+      html += '<th>ID</th>';
+      html += '<th>User ID</th>';
+      html += '<th>Role</th>';
+      html += '<th>Status</th>';
+      html += '<th>Timestamp</th>';
+      html += '<th>Date & Time</th>';
+      html += '<th>IP Address</th>';
+      html += '</tr></thead><tbody>';
+
+      logs.forEach(log => {
+        const statusClass = log.success ? 'success' : 'error';
+        const statusText = log.success ? '✅ Success' : '❌ Failed';
+        const statusColor = log.success ? '#10b981' : '#f87171';
+
+        html += '<tr>';
+        html += `<td>${log.id || '-'}</td>`;
+        html += `<td><strong>${log.userId}</strong></td>`;
+        html += `<td><span class="role-badge ${log.role}">${log.role.charAt(0).toUpperCase() + log.role.slice(1)}</span></td>`;
+        html += `<td style="color: ${statusColor}; font-weight: bold;">${statusText}</td>`;
+        html += `<td style="font-family: monospace; font-size: 0.85rem;">${log.timestamp}</td>`;
+        html += `<td>${log.timestampReadable}</td>`;
+        html += `<td>${log.ipAddress}</td>`;
+        html += '</tr>';
+      });
+
+      html += '</tbody></table></div>';
+      container.innerHTML = html;
+    }
+
+    // Load statistics
+    async function loadStatistics() {
+      try {
+        const stats = await Database.getStatistics();
+        document.getElementById('totalLogins').textContent = stats.total;
+        document.getElementById('successfulLogins').textContent = stats.successful;
+        document.getElementById('failedLogins').textContent = stats.failed;
+        document.getElementById('uniqueUsers').textContent = stats.uniqueUsers;
+      } catch (error) {
+        console.error('Error loading statistics:', error);
+      }
+    }
+
+    // Export logs to CSV
+    function exportLogs() {
+      if (currentLogs.length === 0) {
+        alert('No logs to export. Please load logs first.');
+        return;
+      }
+
+      let csv = 'ID,User ID,Role,Status,Timestamp,Date & Time,IP Address\n';
+      currentLogs.forEach(log => {
+        csv += `${log.id || ''},${log.userId},${log.role},${log.success ? 'Success' : 'Failed'},${log.timestamp},${log.timestampReadable},${log.ipAddress}\n`;
+      });
+
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `login_logs_${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    }
+
+    // Clear all logs
+    async function clearAllLogs() {
+      if (!checkAdminAccess()) return;
+
+      if (!confirm('⚠️ WARNING: This will delete ALL login logs from the database!\n\nThis action cannot be undone. Are you sure?')) {
+        return;
+      }
+
+      try {
+        await Database.clearAllLogs();
+        alert('All login logs cleared successfully!');
+        loadAllLogs();
+      } catch (error) {
+        alert('Error clearing logs: ' + error.message);
+        console.error('Error clearing logs:', error);
+      }
+    }
+
+    // Initialize page
+    document.addEventListener('DOMContentLoaded', async function() {
+      if (!checkAdminAccess()) return;
+
+      // Initialize database connection
+      try {
+        await Database.init();
+        await loadAllLogs();
+      } catch (error) {
+        document.getElementById('logsTableContainer').innerHTML = 
+          `<div class="error">
+            <h3>❌ Database Connection Error</h3>
+            <p>Error: ${error.message}</p>
+            <p><strong>Please make sure:</strong></p>
+            <ul style="text-align: left; display: inline-block;">
+              <li>MySQL database is running</li>
+              <li>Backend server is running: <code>npm run backend</code></li>
+              <li>Database schema is created (run database/schema.sql)</li>
+              <li>Database configuration is correct in backend/config.js</li>
+            </ul>
+          </div>`;
+        console.error('Database initialization error:', error);
+      }
+    });
+  </script>
+</body>
+</html>
+
