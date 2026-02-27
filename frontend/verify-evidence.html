@@ -166,17 +166,17 @@
                   method: 'wallet_addEthereumChain',
                   params: [{
                     chainId: targetChainId,
-                    chainName: 'Localhost 8546',
-                    rpcUrls: ['http://127.0.0.1:8546'],
+                    chainName: 'Ganache Local 8547',
+                    rpcUrls: ['http://127.0.0.1:8547'],
                     nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 }
                   }],
                 });
               } catch (addError) {
-                alert("Could not add Localhost network to MetaMask.");
+                alert('MetaMask blockchain verification requires local Ganache running on port 8547.\n\nIn cloud deployment, blockchain records are verified automatically by the backend without MetaMask.');
                 return;
               }
             } else {
-              alert("Please switch your MetaMask network to Localhost 8546.");
+              alert('MetaMask verification requires Ganache Local network (port 8547).\n\nIn cloud deployment, use the standard \'Verify Integrity\' button instead — it checks against the backend blockchain record automatically.');
               return;
             }
           }
@@ -314,8 +314,13 @@
       document.getElementById('bcIPFS').textContent = evidence.ipfsCID;
       const ipfsLink = document.getElementById('ipfsLink');
       if (ipfsLink) {
-        ipfsLink.href = CONFIG.IPFS.GATEWAY + evidence.ipfsCID;
-        ipfsLink.textContent = 'View File on Gateway (' + evidence.ipfsCID.substring(0, 16) + '...)';
+        if (evidence.ipfsCID) {
+          ipfsLink.href = CONFIG.IPFS.GATEWAY + evidence.ipfsCID;
+          ipfsLink.textContent = 'View File on Gateway (' + evidence.ipfsCID.substring(0, 16) + '...)';
+        } else {
+          ipfsLink.href = '#';
+          ipfsLink.textContent = 'No IPFS file linked';
+        }
       }
       document.getElementById('bcInvestigator').textContent = evidence.investigator || evidence.investigatorId;
       document.getElementById('bcTimestamp').textContent = evidence.timestamp || evidence.createdAtReadable || new Date(evidence.createdAt).toLocaleString();
