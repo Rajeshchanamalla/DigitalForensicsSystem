@@ -4,10 +4,10 @@
  */
 
 const EvidenceAPI = {
-    API_BASE_URL: CONFIG.API.BASE_URL || 'http://localhost:3000/api',
+    get API_BASE_URL() { return CONFIG.API.BASE_URL; },
 
     // Add new evidence
-    addEvidence: async function(evidenceData) {
+    addEvidence: async function (evidenceData) {
         try {
             const response = await fetch(`${this.API_BASE_URL}/evidence`, {
                 method: 'POST',
@@ -31,7 +31,7 @@ const EvidenceAPI = {
     },
 
     // Get all evidence
-    getAllEvidence: async function(filters = {}) {
+    getAllEvidence: async function (filters = {}) {
         try {
             const queryParams = new URLSearchParams();
             if (filters.caseId) queryParams.append('caseId', filters.caseId);
@@ -56,7 +56,7 @@ const EvidenceAPI = {
     },
 
     // Get evidence by ID
-    getEvidenceById: async function(id) {
+    getEvidenceById: async function (id) {
         try {
             const response = await fetch(`${this.API_BASE_URL}/evidence/${id}`);
 
@@ -76,7 +76,7 @@ const EvidenceAPI = {
     },
 
     // Get evidence by case ID
-    getEvidenceByCaseId: async function(caseId) {
+    getEvidenceByCaseId: async function (caseId) {
         try {
             const response = await fetch(`${this.API_BASE_URL}/evidence/case/${encodeURIComponent(caseId)}`);
 
@@ -93,7 +93,7 @@ const EvidenceAPI = {
     },
 
     // Update evidence status
-    updateEvidenceStatus: async function(id, status, verifiedBy = null, role = null) {
+    updateEvidenceStatus: async function (id, status, verifiedBy = null, role = null) {
         try {
             const response = await fetch(`${this.API_BASE_URL}/evidence/${id}/status`, {
                 method: 'PUT',
@@ -121,7 +121,7 @@ const EvidenceAPI = {
     },
 
     // Delete/Archive evidence
-    deleteEvidence: async function(id, performedBy = null, role = null) {
+    deleteEvidence: async function (id, performedBy = null, role = null) {
         try {
             const response = await fetch(`${this.API_BASE_URL}/evidence/${id}`, {
                 method: 'DELETE',
@@ -148,7 +148,7 @@ const EvidenceAPI = {
     },
 
     // Get chain of custody
-    getChainOfCustody: async function(id) {
+    getChainOfCustody: async function (id) {
         try {
             const response = await fetch(`${this.API_BASE_URL}/evidence/${id}/chain-of-custody`);
 
@@ -165,7 +165,7 @@ const EvidenceAPI = {
     },
 
     // Add verification record
-    addVerification: async function(id, verificationData) {
+    addVerification: async function (id, verificationData) {
         try {
             const response = await fetch(`${this.API_BASE_URL}/evidence/${id}/verify`, {
                 method: 'POST',
@@ -189,7 +189,7 @@ const EvidenceAPI = {
     },
 
     // Get verification history
-    getVerifications: async function(id) {
+    getVerifications: async function (id) {
         try {
             const response = await fetch(`${this.API_BASE_URL}/evidence/${id}/verifications`);
 
@@ -206,7 +206,7 @@ const EvidenceAPI = {
     },
 
     // Get evidence statistics
-    getStatistics: async function() {
+    getStatistics: async function () {
         try {
             const response = await fetch(`${this.API_BASE_URL}/evidence/statistics`);
 
@@ -223,7 +223,7 @@ const EvidenceAPI = {
     },
 
     // Search evidence
-    searchEvidence: async function(searchParams) {
+    searchEvidence: async function (searchParams) {
         try {
             const queryParams = new URLSearchParams();
             if (searchParams.q) queryParams.append('q', searchParams.q);

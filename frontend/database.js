@@ -4,10 +4,10 @@
  */
 
 const Database = {
-    API_BASE_URL: CONFIG.API.BASE_URL || 'http://localhost:3000/api',
+    get API_BASE_URL() { return CONFIG.API.BASE_URL; },
 
     // Insert login log (POST /api/login-logs)
-    insertLoginLog: async function(userId, role, success, ipAddress = null) {
+    insertLoginLog: async function (userId, role, success, ipAddress = null) {
         try {
             const response = await fetch(`${this.API_BASE_URL}/login-logs`, {
                 method: 'POST',
@@ -36,10 +36,10 @@ const Database = {
     },
 
     // Get all login logs (GET /api/login-logs)
-    getAllLogs: async function() {
+    getAllLogs: async function () {
         try {
             const response = await fetch(`${this.API_BASE_URL}/login-logs`);
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
@@ -53,10 +53,10 @@ const Database = {
     },
 
     // Get logs by user ID (GET /api/login-logs/user/:userId)
-    getLogsByUser: async function(userId) {
+    getLogsByUser: async function (userId) {
         try {
             const response = await fetch(`${this.API_BASE_URL}/login-logs/user/${encodeURIComponent(userId)}`);
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
@@ -70,10 +70,10 @@ const Database = {
     },
 
     // Get successful logins (GET /api/login-logs/successful)
-    getSuccessfulLogins: async function() {
+    getSuccessfulLogins: async function () {
         try {
             const response = await fetch(`${this.API_BASE_URL}/login-logs/successful`);
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
@@ -87,10 +87,10 @@ const Database = {
     },
 
     // Get failed logins (GET /api/login-logs/failed)
-    getFailedLogins: async function() {
+    getFailedLogins: async function () {
         try {
             const response = await fetch(`${this.API_BASE_URL}/login-logs/failed`);
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
@@ -104,7 +104,7 @@ const Database = {
     },
 
     // Get recent logs (GET /api/login-logs with limit)
-    getRecentLogs: async function(limit = 50) {
+    getRecentLogs: async function (limit = 50) {
         try {
             const logs = await this.getAllLogs();
             return logs.slice(0, limit);
@@ -115,12 +115,12 @@ const Database = {
     },
 
     // Clear all logs (DELETE /api/login-logs)
-    clearAllLogs: async function() {
+    clearAllLogs: async function () {
         try {
             const response = await fetch(`${this.API_BASE_URL}/login-logs`, {
                 method: 'DELETE'
             });
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
@@ -135,10 +135,10 @@ const Database = {
     },
 
     // Get statistics (GET /api/login-logs/statistics)
-    getStatistics: async function() {
+    getStatistics: async function () {
         try {
             const response = await fetch(`${this.API_BASE_URL}/login-logs/statistics`);
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
@@ -158,7 +158,7 @@ const Database = {
     },
 
     // Initialize database (no-op for API, kept for compatibility)
-    init: async function() {
+    init: async function () {
         // Check if API is available
         try {
             const response = await fetch(`${this.API_BASE_URL}/health`);

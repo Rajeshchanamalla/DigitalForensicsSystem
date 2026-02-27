@@ -42,7 +42,7 @@ const CONFIG = {
 const UserManagement = {
     // Get API base URL
     getApiBaseUrl: function () {
-        return 'http://localhost:3000/api'; // Direct URL - can be changed if needed
+        return CONFIG.API.BASE_URL; // Reads from env-config.js in production
     },
 
     // Get all users from MySQL database
