@@ -1,10 +1,9 @@
 -- ============================================================
 -- Combined Database Init + Security Migration
--- Run this once on Railway MySQL to set up all tables
+-- Works on Railway MySQL (uses the pre-existing 'railway' database)
+-- Set DB_NAME=railway in Railway backend environment variables
 -- ============================================================
 
-CREATE DATABASE IF NOT EXISTS forensic_system_db;
-USE forensic_system_db;
 
 -- Login Logs Table
 CREATE TABLE IF NOT EXISTS login_logs (
