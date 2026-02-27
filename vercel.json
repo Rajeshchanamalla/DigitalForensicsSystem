@@ -3,6 +3,13 @@
     "buildCommand": "node scripts/build.js",
     "outputDirectory": "frontend",
     "installCommand": "npm install",
+    "redirects": [
+        {
+            "source": "/",
+            "destination": "/login.html",
+            "permanent": false
+        }
+    ],
     "headers": [
         {
             "source": "/(.*)",
