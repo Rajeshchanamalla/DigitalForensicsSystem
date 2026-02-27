@@ -5,7 +5,8 @@ const solc = require('solc');
 
 async function deploy() {
     console.log('Connecting to blockchain network...');
-    const provider = new Web3.providers.HttpProvider('http://127.0.0.1:8546'); // Ganache default
+    const ganacheUrl = process.env.BLOCKCHAIN_NETWORK || 'http://127.0.0.1:8547';
+    const provider = new Web3.providers.HttpProvider(ganacheUrl);
     const web3 = new Web3(provider);
 
     const dataPath = path.resolve(__dirname, '../blockchain-data.json');

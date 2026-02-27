@@ -5,12 +5,17 @@ const allowedOrigins = process.env.FRONTEND_URL
     ? [process.env.FRONTEND_URL, 'http://localhost:8000', 'http://localhost:3000']
     : '*';
 
+// Warn loudly if DB env vars aren't set (common Railway setup mistake)
+if (!process.env.DB_HOST && process.env.NODE_ENV !== 'development') {
+    console.warn('⚠️  DB_HOST env var not set! Make sure Railway DB variables are configured.');
+}
+
 module.exports = {
     // MySQL Database Configuration
     database: {
         host: process.env.DB_HOST || 'localhost',
         user: process.env.DB_USER || 'root',
-        password: process.env.DB_PASSWORD || 'Rajesh@512',
+        password: process.env.DB_PASSWORD || '',          // No hardcoded fallback password
         database: process.env.DB_NAME || 'forensic_system_db',
         port: parseInt(process.env.DB_PORT) || 3306,
         connectionLimit: 10,
