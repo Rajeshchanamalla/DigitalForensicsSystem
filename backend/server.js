@@ -50,16 +50,24 @@ async function autoInitDatabase() {
     }
 }
 
-// Initialize Blockchain History on startup
+// Initialize on startup
 setTimeout(async () => {
     await autoInitDatabase();           // Create tables if not exist
-    await initializeBlockchain();
-    printBlockchainHistory().catch(err => console.error('Error printing blockchain history:', err.message));
-}, 3000); // Wait for connection
+    // Only start blockchain if explicitly enabled (skip in cloud by default)
+    if (process.env.BLOCKCHAIN_ENABLED === 'true') {
+        await initializeBlockchain();
+        printBlockchainHistory().catch(err => console.error('Error printing blockchain history:', err.message));
+    } else {
+        console.log('ℹ️  Blockchain disabled (set BLOCKCHAIN_ENABLED=true to enable)');
+    }
+}, 3000);
 
 
 const app = express();
 const PORT = config.server.port;
+
+// Trust Railway/Vercel reverse proxy — required for rate-limiting and IP detection
+app.set('trust proxy', 1);
 
 // ── Security Middleware (applied globally, before all routes) ──
 app.use(helmet({                              // HTTP security headers
