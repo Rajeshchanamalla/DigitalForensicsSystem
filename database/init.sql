@@ -1,5 +1,7 @@
--- MySQL Database Schema for Digital Forensic Evidence Management System
--- Login Logs Table
+-- ============================================================
+-- Combined Database Init + Security Migration
+-- Run this once on Railway MySQL to set up all tables
+-- ============================================================
 
 CREATE DATABASE IF NOT EXISTS forensic_system_db;
 USE forensic_system_db;
@@ -19,10 +21,7 @@ CREATE TABLE IF NOT EXISTS login_logs (
     INDEX idx_user_timestamp (user_id, timestamp)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Sample query to view all logs
--- SELECT * FROM login_logs ORDER BY timestamp DESC;
-
--- Users Table (for storing all users with hashed passwords)
+-- Users Table
 CREATE TABLE IF NOT EXISTS users (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id VARCHAR(100) NOT NULL UNIQUE,
@@ -37,23 +36,7 @@ CREATE TABLE IF NOT EXISTS users (
     INDEX idx_is_active (is_active)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Insert default users (passwords will be hashed by application)
--- Note: These are placeholders. Actual passwords should be hashed using bcrypt
--- Default password for all: same as user_id + "123" (e.g., investigator1 -> "invest123")
--- You can insert these after running the application, or insert them manually with hashed passwords
-
--- Sample query to view all users
--- SELECT user_id, role, is_default, created_at FROM users WHERE is_active = 1;
-
--- Sample query to get statistics
--- SELECT 
---     COUNT(*) as total,
---     SUM(CASE WHEN success = 1 THEN 1 ELSE 0 END) as successful,
---     SUM(CASE WHEN success = 0 THEN 1 ELSE 0 END) as failed,
---     COUNT(DISTINCT user_id) as unique_users
--- FROM login_logs;
-
--- Evidence Table (for storing all evidence records)
+-- Evidence Table
 CREATE TABLE IF NOT EXISTS evidence (
     id INT AUTO_INCREMENT PRIMARY KEY,
     case_id VARCHAR(100) NOT NULL,
@@ -71,27 +54,24 @@ CREATE TABLE IF NOT EXISTS evidence (
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     verified_at DATETIME DEFAULT NULL,
     verified_by VARCHAR(100) DEFAULT NULL,
-    encryption_key_hash VARCHAR(255) DEFAULT NULL COMMENT 'Hash of encryption key',
+    encryption_key_hash VARCHAR(255) DEFAULT NULL,
     is_encrypted BOOLEAN NOT NULL DEFAULT FALSE,
     version INT NOT NULL DEFAULT 1,
-    parent_evidence_id INT DEFAULT NULL COMMENT 'For versioning - links to parent evidence',
+    parent_evidence_id INT DEFAULT NULL,
     INDEX idx_case_id (case_id),
     INDEX idx_investigator_id (investigator_id),
     INDEX idx_status (status),
     INDEX idx_evidence_hash (evidence_hash),
     INDEX idx_ipfs_cid (ipfs_cid),
     INDEX idx_created_at (created_at),
-    INDEX idx_case_status (case_id, status),
-    INDEX idx_parent_evidence (parent_evidence_id),
-    INDEX idx_category (category),
-    INDEX idx_is_encrypted (is_encrypted)
+    INDEX idx_category (category)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Chain of Custody Table (for tracking evidence access and transfers)
+-- Chain of Custody Table
 CREATE TABLE IF NOT EXISTS chain_of_custody (
     id INT AUTO_INCREMENT PRIMARY KEY,
     evidence_id INT NOT NULL,
-    action VARCHAR(50) NOT NULL COMMENT 'upload, view, download, verify, transfer, status_change',
+    action VARCHAR(50) NOT NULL,
     performed_by VARCHAR(100) NOT NULL,
     role VARCHAR(50) NOT NULL,
     description TEXT DEFAULT NULL,
@@ -100,25 +80,23 @@ CREATE TABLE IF NOT EXISTS chain_of_custody (
     FOREIGN KEY (evidence_id) REFERENCES evidence(id) ON DELETE CASCADE,
     INDEX idx_evidence_id (evidence_id),
     INDEX idx_performed_by (performed_by),
-    INDEX idx_timestamp (timestamp),
-    INDEX idx_action (action)
+    INDEX idx_timestamp (timestamp)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Evidence Verification Table (for storing verification results)
+-- Evidence Verification Table
 CREATE TABLE IF NOT EXISTS evidence_verification (
     id INT AUTO_INCREMENT PRIMARY KEY,
     evidence_id INT NOT NULL,
     verified_by VARCHAR(100) NOT NULL,
-    verification_hash VARCHAR(64) NOT NULL COMMENT 'Computed hash during verification',
-    stored_hash VARCHAR(64) NOT NULL COMMENT 'Original stored hash',
+    verification_hash VARCHAR(64) NOT NULL,
+    stored_hash VARCHAR(64) NOT NULL,
     is_valid BOOLEAN NOT NULL,
     verification_notes TEXT DEFAULT NULL,
     verified_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (evidence_id) REFERENCES evidence(id) ON DELETE CASCADE,
     INDEX idx_evidence_id (evidence_id),
     INDEX idx_verified_by (verified_by),
-    INDEX idx_is_valid (is_valid),
-    INDEX idx_verified_at (verified_at)
+    INDEX idx_is_valid (is_valid)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Evidence Comments Table
@@ -131,11 +109,10 @@ CREATE TABLE IF NOT EXISTS evidence_comments (
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (evidence_id) REFERENCES evidence(id) ON DELETE CASCADE,
     INDEX idx_evidence_id (evidence_id),
-    INDEX idx_user_id (user_id),
-    INDEX idx_created_at (created_at)
+    INDEX idx_user_id (user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Evidence Versions Table (for versioning)
+-- Evidence Versions Table
 CREATE TABLE IF NOT EXISTS evidence_versions (
     id INT AUTO_INCREMENT PRIMARY KEY,
     evidence_id INT NOT NULL,
@@ -148,12 +125,10 @@ CREATE TABLE IF NOT EXISTS evidence_versions (
     change_description TEXT DEFAULT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (evidence_id) REFERENCES evidence(id) ON DELETE CASCADE,
-    INDEX idx_evidence_id (evidence_id),
-    INDEX idx_version_number (evidence_id, version_number),
     UNIQUE KEY unique_evidence_version (evidence_id, version_number)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Evidence Sharing Table (for sharing between cases)
+-- Evidence Sharing Table
 CREATE TABLE IF NOT EXISTS evidence_sharing (
     id INT AUTO_INCREMENT PRIMARY KEY,
     evidence_id INT NOT NULL,
@@ -165,11 +140,10 @@ CREATE TABLE IF NOT EXISTS evidence_sharing (
     FOREIGN KEY (evidence_id) REFERENCES evidence(id) ON DELETE CASCADE,
     INDEX idx_evidence_id (evidence_id),
     INDEX idx_source_case (source_case_id),
-    INDEX idx_target_case (target_case_id),
-    INDEX idx_shared_at (shared_at)
+    INDEX idx_target_case (target_case_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Evidence Categories Table (for categorization)
+-- Evidence Categories Table
 CREATE TABLE IF NOT EXISTS evidence_categories (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL UNIQUE,
@@ -179,7 +153,6 @@ CREATE TABLE IF NOT EXISTS evidence_categories (
     INDEX idx_name (name)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Insert default categories
 INSERT IGNORE INTO evidence_categories (name, description, color) VALUES
 ('Document', 'Text documents, PDFs, Word files', '#3b82f6'),
 ('Image', 'Photos, screenshots, images', '#10b981'),
@@ -190,7 +163,7 @@ INSERT IGNORE INTO evidence_categories (name, description, color) VALUES
 ('Mobile', 'Mobile device data', '#ec4899'),
 ('Other', 'Other types of evidence', '#6b7280');
 
--- User Sessions Table (for JWT token management)
+-- User Sessions Table
 CREATE TABLE IF NOT EXISTS user_sessions (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id VARCHAR(100) NOT NULL,
@@ -208,19 +181,17 @@ CREATE TABLE IF NOT EXISTS user_sessions (
 CREATE TABLE IF NOT EXISTS email_notifications (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id VARCHAR(100) NOT NULL,
-    type VARCHAR(50) NOT NULL COMMENT 'evidence_uploaded, evidence_verified, status_changed, etc.',
+    type VARCHAR(50) NOT NULL,
     subject VARCHAR(255) NOT NULL,
     message TEXT NOT NULL,
     sent BOOLEAN NOT NULL DEFAULT FALSE,
     sent_at DATETIME DEFAULT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_user_id (user_id),
-    INDEX idx_type (type),
-    INDEX idx_sent (sent),
-    INDEX idx_created_at (created_at)
+    INDEX idx_sent (sent)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Blockchain Transactions Table (for Ethereum integration)
+-- Blockchain Transactions Table
 CREATE TABLE IF NOT EXISTS blockchain_transactions (
     id INT AUTO_INCREMENT PRIMARY KEY,
     evidence_id INT NOT NULL,
@@ -235,18 +206,46 @@ CREATE TABLE IF NOT EXISTS blockchain_transactions (
     FOREIGN KEY (evidence_id) REFERENCES evidence(id) ON DELETE CASCADE,
     INDEX idx_evidence_id (evidence_id),
     INDEX idx_transaction_hash (transaction_hash),
-    INDEX idx_status (status),
+    INDEX idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ── Security Tables (added by security migration) ──
+
+CREATE TABLE IF NOT EXISTS account_lockouts (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id VARCHAR(100) NOT NULL UNIQUE,
+    failed_attempts INT NOT NULL DEFAULT 0,
+    locked_until DATETIME DEFAULT NULL,
+    last_attempt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    ip_address VARCHAR(45) DEFAULT NULL,
+    INDEX idx_user_id (user_id),
+    INDEX idx_locked_until (locked_until)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS security_alerts (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    alert_type VARCHAR(100) NOT NULL,
+    user_id VARCHAR(100) DEFAULT NULL,
+    ip_address VARCHAR(45) DEFAULT NULL,
+    description TEXT DEFAULT NULL,
+    severity VARCHAR(20) NOT NULL DEFAULT 'medium',
+    is_resolved BOOLEAN NOT NULL DEFAULT FALSE,
+    resolved_by VARCHAR(100) DEFAULT NULL,
+    resolved_at DATETIME DEFAULT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_alert_type (alert_type),
+    INDEX idx_severity (severity),
+    INDEX idx_is_resolved (is_resolved),
     INDEX idx_created_at (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Note: If you already have an evidence table, run database/migration.sql to add new columns
--- The evidence table is created above with all necessary columns for new installations
-
--- Sample queries for evidence
--- SELECT * FROM evidence ORDER BY created_at DESC;
--- SELECT * FROM evidence WHERE case_id = 'CASE-2025-001';
--- SELECT * FROM chain_of_custody WHERE evidence_id = 1 ORDER BY timestamp DESC;
--- SELECT * FROM evidence_verification WHERE evidence_id = 1 ORDER BY verified_at DESC;
--- SELECT * FROM evidence_comments WHERE evidence_id = 1 ORDER BY created_at DESC;
--- SELECT * FROM evidence_versions WHERE evidence_id = 1 ORDER BY version_number DESC;
-
+CREATE TABLE IF NOT EXISTS ip_blocklist (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    ip_address VARCHAR(45) NOT NULL UNIQUE,
+    reason TEXT DEFAULT NULL,
+    blocked_by VARCHAR(100) DEFAULT NULL,
+    blocked_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    expires_at DATETIME DEFAULT NULL,
+    INDEX idx_ip_address (ip_address),
+    INDEX idx_expires_at (expires_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

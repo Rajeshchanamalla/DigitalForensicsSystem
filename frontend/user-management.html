@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>User Management - Digital Forensics</title>
   <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
   <nav class="navbar">
     <div class="nav-container">
@@ -42,7 +44,8 @@
             <option value="analyst">Analyst</option>
             <option value="court">Court</option>
           </select>
-          <small style="color: #9ca3af; display: block; margin-top: 5px;">Note: Admin users can only be created manually in config.js</small>
+          <small style="color: #9ca3af; display: block; margin-top: 5px;">Note: Admin users can only be created manually
+            in config.js</small>
         </div>
         <button onclick="addUser()" class="btn-primary">Add User</button>
       </div>
@@ -55,8 +58,11 @@
       </div>
     </div>
   </div>
+  <script src="env-config.js"></script>
 
   <script src="config.js"></script>
+  <script src="enhanced-features.js"></script>
+  <script src="user-management.js"></script>
   <script src="app.js"></script>
   <script>
     async function loadUsers() {
@@ -72,7 +78,7 @@
         }
 
         let html = '<table class="users-table"><thead><tr><th>User ID</th><th>Role</th><th>Type</th><th>Created At</th><th>Actions</th></tr></thead><tbody>';
-        
+
         // Sort users: default first, then by creation date
         const usersArray = Object.keys(users).map(userId => ({
           userId,
@@ -86,7 +92,7 @@
           const userType = user.isDefault ? 'Default' : 'Added';
           const typeColor = user.isDefault ? '#60a5fa' : '#10b981';
           const createdAt = user.createdAt ? new Date(user.createdAt).toLocaleString() : 'N/A';
-          
+
           html += `
             <tr>
               <td><strong>${user.userId}</strong></td>
@@ -94,15 +100,15 @@
               <td><span style="color: ${typeColor}; font-weight: bold;">${userType}</span></td>
               <td>${createdAt}</td>
               <td>
-                ${user.isDefault ? 
-                  '<span style="color: #9ca3af;">Cannot delete</span>' : 
-                  `<button onclick="deleteUser('${user.userId}')" class="btn-danger">Delete</button>`
-                }
+                ${user.isDefault ?
+              '<span style="color: #9ca3af;">Cannot delete</span>' :
+              `<button onclick="deleteUser('${user.userId}')" class="btn-danger">Delete</button>`
+            }
               </td>
             </tr>
           `;
         });
-        
+
         html += '</tbody></table>';
         usersListDiv.innerHTML = html;
       } catch (error) {
@@ -146,12 +152,12 @@
 
         // Add user to database
         await UserManagement.addUser(userId, password, role);
-        
+
         // Clear form
         document.getElementById('newUserId').value = '';
         document.getElementById('newUserPassword').value = '';
         document.getElementById('newUserRole').value = 'investigator';
-        
+
         // Reload users list
         await loadUsers();
         alert('User added successfully to database!');
@@ -181,10 +187,10 @@
       }
     }
 
-    document.addEventListener('DOMContentLoaded', async function() {
+    document.addEventListener('DOMContentLoaded', async function () {
       await loadUsers();
     });
   </script>
 </body>
-</html>
 
+</html>

@@ -5,8 +5,13 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
+    "start:prod": "node backend/server.js",
     "backend": "node backend/server.js",
-    "dev": "nodemon backend/server.js"
+    "dev": "nodemon backend/server.js",
+    "build": "node scripts/build.js",
+    "db:init": "node scripts/db-init.js",
+    "start:blockchain": "ganache --wallet.deterministic --wallet.totalAccounts 10 --server.port 8546 --chain.networkId 1337 --miner.blockGasLimit 30000000 --database.dbPath ./chain-data",
+    "clean:blockchain": "if exist chain-data rmdir /s /q chain-data"
   },
   "keywords": [
     "blockchain",
@@ -18,13 +23,22 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "express": "^4.18.2",
-    "mysql2": "^3.6.5",
+    "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
-    "bcryptjs": "^2.4.3"
+    "crypto-js": "^4.2.0",
+    "dotenv": "^16.6.1",
+    "express": "^4.18.2",
+    "express-rate-limit": "^8.2.1",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.3",
+    "mysql2": "^3.6.5",
+    "nodemailer": "^6.10.1",
+    "pdfkit": "^0.13.0",
+    "solc": "^0.8.33",
+    "web3": "^4.16.0"
   },
   "devDependencies": {
+    "ganache": "^7.9.1",
     "nodemon": "^3.0.2"
   }
 }
-

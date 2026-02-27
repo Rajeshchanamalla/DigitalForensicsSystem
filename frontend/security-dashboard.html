@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Security Center - Digital Forensics</title>
+    <meta name="description" content="Admin Security Dashboard - Monitor threats, manage lockouts and IP blocklist">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* ── Security Dashboard Custom Styles ── */
+        :root {
+            --red-critical: #ef4444;
+            --red-high: #f97316;
+            --yellow-medium: #f59e0b;
+            --green-low: #10b981;
+            --color-bg: #0f1117;
+            --color-card: #1a1d2e;
+            --color-border: #2d3150;
+            --color-text: #e2e8f0;
+            --color-muted: #6b7280;
+            --color-accent: #6366f1;
+        }
+
+        body {
+            background: var(--color-bg);
+            color: var(--color-text);
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            margin: 0;
+        }
+
+        .sec-header {
+            background: linear-gradient(135deg, #1a1d2e 0%, #16213e 100%);
+            border-bottom: 1px solid var(--color-border);
+            padding: 1.5rem 2rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .sec-header h1 {
+            margin: 0;
+            font-size: 1.6rem;
+            background: linear-gradient(90deg, #f97316, #ef4444);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .sec-header .subtitle {
+            color: var(--color-muted);
+            font-size: 0.9rem;
+            margin: 0;
+        }
+
+        /* Stat Cards */
+        .security-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            padding: 1.5rem 2rem 0;
+        }
+
+        .security-stat-card {
+            background: var(--color-card);
+            border: 1px solid var(--color-border);
+            border-radius: 12px;
+            padding: 1.25rem;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .security-stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+        }
+
+        .security-stat-card .stat-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .security-stat-card .stat-label {
+            font-size: 0.8rem;
+            color: var(--color-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .security-stat-card .stat-value {
+            font-size: 2.2rem;
+            font-weight: 700;
+            margin: 0.25rem 0;
+        }
+
+        .security-stat-card.critical {
+            border-left: 3px solid var(--red-critical);
+        }
+
+        .security-stat-card.high {
+            border-left: 3px solid var(--red-high);
+        }
+
+        .security-stat-card.warning {
+            border-left: 3px solid var(--yellow-medium);
+        }
+
+        .security-stat-card.success {
+            border-left: 3px solid var(--green-low);
+        }
+
+        .security-stat-card.accent {
+            border-left: 3px solid var(--color-accent);
+        }
+
+        .stat-glow {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            opacity: 0.08;
+        }
+
+        .critical .stat-glow {
+            background: var(--red-critical);
+        }
+
+        .high .stat-glow {
+            background: var(--red-high);
+        }
+
+        .warning .stat-glow {
+            background: var(--yellow-medium);
+        }
+
+        .success .stat-glow {
+            background: var(--green-low);
+        }
+
+        .accent .stat-glow {
+            background: var(--color-accent);
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 0;
+            padding: 1.5rem 2rem 0;
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        .tab-btn {
+            padding: 0.75rem 1.5rem;
+            background: transparent;
+            border: none;
+            border-bottom: 3px solid transparent;
+            color: var(--color-muted);
+            cursor: pointer;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+            border-radius: 0;
+        }
+
+        .tab-btn:hover {
+            color: var(--color-text);
+        }
+
+        .tab-btn.active {
+            color: var(--color-accent);
+            border-bottom-color: var(--color-accent);
+            font-weight: 600;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 1.5rem 2rem;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Section Headers */
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .section-header h2 {
+            margin: 0;
+            font-size: 1.1rem;
+            color: var(--color-text);
+        }
+
+        .refresh-btn {
+            padding: 0.4rem 1rem;
+            background: transparent;
+            border: 1px solid var(--color-border);
+            color: var(--color-muted);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+
+        .refresh-btn:hover {
+            border-color: var(--color-accent);
+            color: var(--color-accent);
+        }
+
+        /* Tables */
+        .sec-table-wrap {
+            overflow-x: auto;
+            border-radius: 10px;
+            border: 1px solid var(--color-border);
+        }
+
+        .sec-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        .sec-table th {
+            background: #12151f;
+            color: var(--color-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.05em;
+            padding: 0.75rem 1rem;
+            text-align: left;
+        }
+
+        .sec-table td {
+            padding: 0.75rem 1rem;
+            border-top: 1px solid var(--color-border);
+            vertical-align: middle;
+        }
+
+        .sec-table tr:hover td {
+            background: rgba(99, 102, 241, 0.05);
+        }
+
+        /* Severity Badges */
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.6rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .badge.critical {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--red-critical);
+        }
+
+        .badge.high {
+            background: rgba(249, 115, 22, 0.2);
+            color: var(--red-high);
+        }
+
+        .badge.medium {
+            background: rgba(245, 158, 11, 0.2);
+            color: var(--yellow-medium);
+        }
+
+        .badge.low {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--green-low);
+        }
+
+        .badge.resolved {
+            background: rgba(107, 114, 128, 0.2);
+            color: var(--color-muted);
+        }
+
+        /* Alert Type Labels */
+        .alert-type-label {
+            font-family: monospace;
+            font-size: 0.8rem;
+            color: #a5b4fc;
+        }
+
+        /* Action Buttons */
+        .btn-resolve {
+            padding: 0.3rem 0.8rem;
+            background: transparent;
+            border: 1px solid var(--green-low);
+            color: var(--green-low);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.2s;
+        }
+
+        .btn-resolve:hover {
+            background: var(--green-low);
+            color: #000;
+        }
+
+        .btn-unlock {
+            padding: 0.3rem 0.8rem;
+            background: transparent;
+            border: 1px solid #f59e0b;
+            color: #f59e0b;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.2s;
+        }
+
+        .btn-unlock:hover {
+            background: #f59e0b;
+            color: #000;
+        }
+
+        .btn-remove {
+            padding: 0.3rem 0.8rem;
+            background: transparent;
+            border: 1px solid var(--red-critical);
+            color: var(--red-critical);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.2s;
+        }
+
+        .btn-remove:hover {
+            background: var(--red-critical);
+            color: #fff;
+        }
+
+        /* Add IP Form */
+        .add-ip-form {
+            background: var(--color-card);
+            border: 1px solid var(--color-border);
+            border-radius: 10px;
+            padding: 1.25rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .add-ip-form h3 {
+            margin: 0 0 1rem;
+            font-size: 0.95rem;
+            color: #f59e0b;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            align-items: flex-end;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+            flex: 1;
+            min-width: 160px;
+        }
+
+        .form-group label {
+            font-size: 0.78rem;
+            color: var(--color-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .form-group input,
+        .form-group select {
+            padding: 0.55rem 0.75rem;
+            background: #12151f;
+            border: 1px solid var(--color-border);
+            color: var(--color-text);
+            border-radius: 6px;
+            font-size: 0.9rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            border-color: var(--color-accent);
+        }
+
+        .btn-block-ip {
+            padding: 0.55rem 1.25rem;
+            background: var(--red-critical);
+            border: none;
+            color: #fff;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: opacity 0.2s;
+            white-space: nowrap;
+        }
+
+        .btn-block-ip:hover {
+            opacity: 0.85;
+        }
+
+        /* Audit Report */
+        .audit-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .audit-card {
+            background: var(--color-card);
+            border: 1px solid var(--color-border);
+            border-radius: 10px;
+            padding: 1.25rem;
+            text-align: center;
+        }
+
+        .audit-card .audit-val {
+            font-size: 2.5rem;
+            font-weight: 700;
+        }
+
+        .audit-card .audit-label {
+            color: var(--color-muted);
+            font-size: 0.85rem;
+            margin-top: 0.25rem;
+        }
+
+        .recent-alerts-heading {
+            font-size: 0.95rem;
+            margin: 1.5rem 0 0.75rem;
+            color: var(--color-text);
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: var(--color-muted);
+        }
+
+        .empty-state .empty-icon {
+            font-size: 3rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .empty-state p {
+            margin: 0;
+            font-size: 0.95rem;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 1.5rem;
+            right: 1.5rem;
+            padding: 0.75rem 1.25rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            color: #fff;
+            z-index: 9999;
+            display: none;
+            animation: slideUp 0.3s ease;
+        }
+
+        .toast.success {
+            background: #059669;
+        }
+
+        .toast.error {
+            background: #dc2626;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(20px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        /* Loading */
+        .loading {
+            color: var(--color-muted);
+            font-style: italic;
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--color-bg);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--color-border);
+            border-radius: 3px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Navbar (reuse from admin-dashboard) -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <h3>🔒 Digital Forensic System</h3>
+            <div class="nav-links">
+                <a href="admin-dashboard.html">Dashboard</a>
+                <a href="user-management.html">Users</a>
+                <a href="login-logs.html">Login Logs</a>
+                <a href="security-dashboard.html" class="active">🔐 Security</a>
+                <a href="#" onclick="logout()">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Header -->
+    <div class="sec-header">
+        <div>
+            <h1>🔐 Security Center</h1>
+            <p class="subtitle">Threat monitoring, account lockouts & IP blocklist management — Admin only</p>
+        </div>
+    </div>
+
+    <!-- Security Stat Cards -->
+    <div class="security-stats" id="securityStats">
+        <div class="security-stat-card critical">
+            <div class="stat-glow"></div>
+            <div class="stat-icon">🚨</div>
+            <div class="stat-label">Critical Alerts</div>
+            <div class="stat-value" id="statCritical">—</div>
+        </div>
+        <div class="security-stat-card high">
+            <div class="stat-glow"></div>
+            <div class="stat-icon">⚠️</div>
+            <div class="stat-label">High Severity</div>
+            <div class="stat-value" id="statHigh">—</div>
+        </div>
+        <div class="security-stat-card warning">
+            <div class="stat-glow"></div>
+            <div class="stat-icon">🔒</div>
+            <div class="stat-label">Locked Accounts</div>
+            <div class="stat-value" id="statLockouts">—</div>
+        </div>
+        <div class="security-stat-card accent">
+            <div class="stat-glow"></div>
+            <div class="stat-icon">🚫</div>
+            <div class="stat-label">Blocked IPs</div>
+            <div class="stat-value" id="statBlocked">—</div>
+        </div>
+        <div class="security-stat-card success">
+            <div class="stat-glow"></div>
+            <div class="stat-icon">✅</div>
+            <div class="stat-label">Unresolved Alerts</div>
+            <div class="stat-value" id="statUnresolved">—</div>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+        <button class="tab-btn active" id="tab-alerts" onclick="switchTab('alerts')">🚨 Security Alerts</button>
+        <button class="tab-btn" id="tab-lockouts" onclick="switchTab('lockouts')">🔒 Account Lockouts</button>
+        <button class="tab-btn" id="tab-blocklist" onclick="switchTab('blocklist')">🚫 IP Blocklist</button>
+        <button class="tab-btn" id="tab-audit" onclick="switchTab('audit')">📋 Audit Report</button>
+    </div>
+
+    <!-- TAB: Security Alerts -->
+    <div class="tab-content active" id="content-alerts">
+        <div class="section-header">
+            <h2>Live Security Alerts</h2>
+            <div style="display:flex;gap:0.5rem;align-items:center;">
+                <select id="alertFilter" onchange="loadAlerts()"
+                    style="background:#1a1d2e;border:1px solid #2d3150;color:#e2e8f0;padding:0.35rem 0.6rem;border-radius:6px;font-size:0.85rem;">
+                    <option value="">All Severities</option>
+                    <option value="critical">Critical</option>
+                    <option value="high">High</option>
+                    <option value="medium">Medium</option>
+                    <option value="low">Low</option>
+                </select>
+                <select id="alertResolved" onchange="loadAlerts()"
+                    style="background:#1a1d2e;border:1px solid #2d3150;color:#e2e8f0;padding:0.35rem 0.6rem;border-radius:6px;font-size:0.85rem;">
+                    <option value="false">Unresolved</option>
+                    <option value="true">Resolved</option>
+                    <option value="">All</option>
+                </select>
+                <button class="refresh-btn" onclick="loadAlerts()">⟳ Refresh</button>
+            </div>
+        </div>
+        <div class="sec-table-wrap">
+            <table class="sec-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Type</th>
+                        <th>User</th>
+                        <th>IP Address</th>
+                        <th>Description</th>
+                        <th>Severity</th>
+                        <th>Time</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="alertsTableBody">
+                    <tr>
+                        <td colspan="8" class="loading">Loading alerts...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- TAB: Account Lockouts -->
+    <div class="tab-content" id="content-lockouts">
+        <div class="section-header">
+            <h2>Currently Locked Accounts</h2>
+            <button class="refresh-btn" onclick="loadLockouts()">⟳ Refresh</button>
+        </div>
+        <div class="sec-table-wrap">
+            <table class="sec-table">
+                <thead>
+                    <tr>
+                        <th>User ID</th>
+                        <th>Failed Attempts</th>
+                        <th>IP Address</th>
+                        <th>Last Attempt</th>
+                        <th>Locked Until</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="lockoutsTableBody">
+                    <tr>
+                        <td colspan="6" class="loading">Loading lockouts...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- TAB: IP Blocklist -->
+    <div class="tab-content" id="content-blocklist">
+        <div class="add-ip-form">
+            <h3>➕ Block an IP Address</h3>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>IP Address</label>
+                    <input type="text" id="blockIpInput" placeholder="e.g. 192.168.1.100" maxlength="45">
+                </div>
+                <div class="form-group">
+                    <label>Reason</label>
+                    <input type="text" id="blockReasonInput" placeholder="e.g. Repeated brute-force attempts">
+                </div>
+                <div class="form-group">
+                    <label>Expires (optional)</label>
+                    <input type="datetime-local" id="blockExpiresInput">
+                </div>
+                <button class="btn-block-ip" onclick="blockIp()">🚫 Block IP</button>
+            </div>
+        </div>
+        <div class="section-header">
+            <h2>Blocked IPs</h2>
+            <button class="refresh-btn" onclick="loadBlocklist()">⟳ Refresh</button>
+        </div>
+        <div class="sec-table-wrap">
+            <table class="sec-table">
+                <thead>
+                    <tr>
+                        <th>IP Address</th>
+                        <th>Reason</th>
+                        <th>Blocked By</th>
+                        <th>Blocked At</th>
+                        <th>Expires</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="blocklistTableBody">
+                    <tr>
+                        <td colspan="6" class="loading">Loading blocklist...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- TAB: Audit Report -->
+    <div class="tab-content" id="content-audit">
+        <div class="section-header">
+            <h2>Security Audit Report</h2>
+            <button class="refresh-btn" onclick="loadAuditReport()">⟳ Refresh</button>
+        </div>
+        <div class="audit-grid" id="auditGrid">
+            <div class="loading">Loading audit report...</div>
+        </div>
+        <h4 class="recent-alerts-heading">🔴 Recent Unresolved Alerts</h4>
+        <div class="sec-table-wrap">
+            <table class="sec-table">
+                <thead>
+                    <tr>
+                        <th>Type</th>
+                        <th>Description</th>
+                        <th>Severity</th>
+                        <th>Time</th>
+                    </tr>
+                </thead>
+                <tbody id="recentAlertsBody">
+                    <tr>
+                        <td colspan="4" class="loading">Loading...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+  <script src="env-config.js"></script>
+
+    <script src="config.js"></script>
+    <script src="database.js"></script>
+    <script src="evidence-api.js"></script>
+    <script src="enhanced-features.js"></script>
+    <script src="app.js"></script>
+    <script>
+        const API = CONFIG.API.BASE_URL;
+
+        // ── Get JWT token ──
+        function getAuthHeaders() {
+            const token = EnhancedFeatures.getToken ? EnhancedFeatures.getToken() : sessionStorage.getItem('jwt_token');
+            return token ? { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }
+                : { 'Content-Type': 'application/json' };
+        }
+
+        // ── Toast ──
+        function showToast(msg, type = 'success') {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.className = `toast ${type}`;
+            t.style.display = 'block';
+            setTimeout(() => { t.style.display = 'none'; }, 3500);
+        }
+
+        // ── Tab Switching ──
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.getElementById('tab-' + tab).classList.add('active');
+            document.getElementById('content-' + tab).classList.add('active');
+            if (tab === 'alerts') loadAlerts();
+            else if (tab === 'lockouts') loadLockouts();
+            else if (tab === 'blocklist') loadBlocklist();
+            else if (tab === 'audit') loadAuditReport();
+        }
+
+        // ── Severity Badge ──
+        function severityBadge(sev) {
+            const map = { critical: '🔴 Critical', high: '🟠 High', medium: '🟡 Medium', low: '🟢 Low' };
+            return `<span class="badge ${sev}">${map[sev] || sev}</span>`;
+        }
+
+        // ── Load Security Stats ──
+        async function loadStats() {
+            try {
+                const r = await fetch(`${API}/security/audit-report`, { headers: getAuthHeaders() });
+                if (!r.ok) return;
+                const data = await r.json();
+                const rep = data.report;
+                document.getElementById('statCritical').textContent = rep.alerts.critical ?? '0';
+                document.getElementById('statHigh').textContent = rep.alerts.high ?? '0';
+                document.getElementById('statLockouts').textContent = rep.lockouts.active ?? '0';
+                document.getElementById('statBlocked').textContent = rep.blocklist.total ?? '0';
+                document.getElementById('statUnresolved').textContent = rep.alerts.unresolved ?? '0';
+            } catch (e) { console.error('Stats error:', e); }
+        }
+
+        // ── Load Alerts ──
+        async function loadAlerts() {
+            const tbody = document.getElementById('alertsTableBody');
+            tbody.innerHTML = '<tr><td colspan="8" class="loading">Loading...</td></tr>';
+            try {
+                const severity = document.getElementById('alertFilter').value;
+                const resolved = document.getElementById('alertResolved').value;
+                let url = `${API}/security/alerts?limit=100`;
+                if (severity) url += `&severity=${severity}`;
+                if (resolved !== '') url += `&is_resolved=${resolved}`;
+                const r = await fetch(url, { headers: getAuthHeaders() });
+                const data = await r.json();
+                if (!r.ok) throw new Error(data.error || 'Error');
+                const alerts = data.alerts || [];
+                if (!alerts.length) {
+                    tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">✅</div><p>No alerts found</p></div></td></tr>';
+                    return;
+                }
+                tbody.innerHTML = alerts.map(a => `
+        <tr>
+          <td style="color:var(--color-muted);font-size:0.78rem;">#${a.id}</td>
+          <td><span class="alert-type-label">${a.alert_type || a.alertType}</span></td>
+          <td>${a.userId || a.user_id || '<span style="color:var(--color-muted)">—</span>'}</td>
+          <td style="font-family:monospace;font-size:0.85rem;">${a.ipAddress || a.ip_address || '—'}</td>
+          <td style="max-width:280px;word-break:break-word;font-size:0.85rem;">${a.description || '—'}</td>
+          <td>${severityBadge(a.severity)}</td>
+          <td style="font-size:0.8rem;white-space:nowrap;color:var(--color-muted);">${a.createdAt}</td>
+          <td>${a.isResolved
+                        ? '<span class="badge resolved">Resolved</span>'
+                        : `<button class="btn-resolve" onclick="resolveAlert(${a.id})">✓ Resolve</button>`
+                    }</td>
+        </tr>`).join('');
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="8" style="color:var(--red-critical);text-align:center;">Error: ${e.message}</td></tr>`;
+            }
+        }
+
+        async function resolveAlert(id) {
+            try {
+                const r = await fetch(`${API}/security/alerts/${id}/resolve`, { method: 'PUT', headers: getAuthHeaders() });
+                const data = await r.json();
+                if (!r.ok) throw new Error(data.error);
+                showToast('Alert resolved successfully', 'success');
+                loadAlerts();
+                loadStats();
+            } catch (e) { showToast('Failed to resolve: ' + e.message, 'error'); }
+        }
+
+        // ── Load Lockouts ──
+        async function loadLockouts() {
+            const tbody = document.getElementById('lockoutsTableBody');
+            tbody.innerHTML = '<tr><td colspan="6" class="loading">Loading...</td></tr>';
+            try {
+                const r = await fetch(`${API}/security/lockouts`, { headers: getAuthHeaders() });
+                const data = await r.json();
+                if (!r.ok) throw new Error(data.error);
+                const lockouts = data.lockouts || [];
+                if (!lockouts.length) {
+                    tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><div class="empty-icon">✅</div><p>No accounts are currently locked</p></div></td></tr>';
+                    return;
+                }
+                tbody.innerHTML = lockouts.map(l => `
+        <tr>
+          <td style="font-weight:600;">${l.userId}</td>
+          <td><span style="color:var(--red-critical);font-weight:700;">${l.failedAttempts}</span></td>
+          <td style="font-family:monospace;font-size:0.85rem;">${l.ipAddress || '—'}</td>
+          <td style="font-size:0.82rem;color:var(--color-muted);">${l.lastAttempt}</td>
+          <td style="font-size:0.82rem;color:#f59e0b;">${l.lockedUntil}</td>
+          <td><button class="btn-unlock" onclick="unlockAccount('${l.userId}')">🔓 Unlock</button></td>
+        </tr>`).join('');
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="6" style="color:var(--red-critical);text-align:center;">Error: ${e.message}</td></tr>`;
+            }
+        }
+
+        async function unlockAccount(userId) {
+            if (!confirm(`Unlock account "${userId}"?`)) return;
+            try {
+                const r = await fetch(`${API}/security/lockouts/${encodeURIComponent(userId)}`, { method: 'DELETE', headers: getAuthHeaders() });
+                const data = await r.json();
+                if (!r.ok) throw new Error(data.error);
+                showToast(`Account "${userId}" unlocked`, 'success');
+                loadLockouts();
+                loadStats();
+            } catch (e) { showToast('Failed: ' + e.message, 'error'); }
+        }
+
+        // ── Load Blocklist ──
+        async function loadBlocklist() {
+            const tbody = document.getElementById('blocklistTableBody');
+            tbody.innerHTML = '<tr><td colspan="6" class="loading">Loading...</td></tr>';
+            try {
+                const r = await fetch(`${API}/security/blocklist`, { headers: getAuthHeaders() });
+                const data = await r.json();
+                if (!r.ok) throw new Error(data.error);
+                const list = data.blocklist || [];
+                if (!list.length) {
+                    tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><div class="empty-icon">🛡️</div><p>No IPs are currently blocked</p></div></td></tr>';
+                    return;
+                }
+                tbody.innerHTML = list.map(b => `
+        <tr>
+          <td style="font-family:monospace;font-weight:600;color:#f87171;">${b.ipAddress}</td>
+          <td style="font-size:0.85rem;">${b.reason || '<span style="color:var(--color-muted)">No reason provided</span>'}</td>
+          <td>${b.blockedBy || '—'}</td>
+          <td style="font-size:0.82rem;color:var(--color-muted);">${b.blockedAt}</td>
+          <td style="font-size:0.82rem;">${b.expiresAt ? `<span style="color:#f59e0b;">${b.expiresAt}</span>` : '<span style="color:var(--color-muted)">Permanent</span>'}</td>
+          <td><button class="btn-remove" onclick="unblockIp(${b.id}, '${b.ipAddress}')">✕ Remove</button></td>
+        </tr>`).join('');
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="6" style="color:var(--red-critical);text-align:center;">Error: ${e.message}</td></tr>`;
+            }
+        }
+
+        async function blockIp() {
+            const ip = document.getElementById('blockIpInput').value.trim();
+            const reason = document.getElementById('blockReasonInput').value.trim();
+            const expiresAt = document.getElementById('blockExpiresInput').value || null;
+            if (!ip) { showToast('Please enter an IP address', 'error'); return; }
+            try {
+                const r = await fetch(`${API}/security/blocklist`, {
+                    method: 'POST', headers: getAuthHeaders(),
+                    body: JSON.stringify({ ipAddress: ip, reason, expiresAt })
+                });
+                const data = await r.json();
+                if (!r.ok) throw new Error(data.error);
+                showToast(`IP ${ip} blocked successfully`, 'success');
+                document.getElementById('blockIpInput').value = '';
+                document.getElementById('blockReasonInput').value = '';
+                document.getElementById('blockExpiresInput').value = '';
+                loadBlocklist();
+                loadStats();
+            } catch (e) { showToast('Failed: ' + e.message, 'error'); }
+        }
+
+        async function unblockIp(id, ip) {
+            if (!confirm(`Remove ${ip} from blocklist?`)) return;
+            try {
+                const r = await fetch(`${API}/security/blocklist/${id}`, { method: 'DELETE', headers: getAuthHeaders() });
+                const data = await r.json();
+                if (!r.ok) throw new Error(data.error);
+                showToast(`IP ${ip} unblocked`, 'success');
+                loadBlocklist();
+                loadStats();
+            } catch (e) { showToast('Failed: ' + e.message, 'error'); }
+        }
+
+        // ── Audit Report ──
+        async function loadAuditReport() {
+            const grid = document.getElementById('auditGrid');
+            const recentBody = document.getElementById('recentAlertsBody');
+            grid.innerHTML = '<div class="loading">Loading audit report...</div>';
+            try {
+                const r = await fetch(`${API}/security/audit-report`, { headers: getAuthHeaders() });
+                const data = await r.json();
+                if (!r.ok) throw new Error(data.error);
+                const rep = data.report;
+                const a = rep.alerts;
+
+                grid.innerHTML = `
+        <div class="audit-card"><div class="audit-val" style="color:var(--red-critical)">${a.critical ?? 0}</div><div class="audit-label">Critical Alerts</div></div>
+        <div class="audit-card"><div class="audit-val" style="color:var(--red-high)">${a.high ?? 0}</div><div class="audit-label">High Alerts</div></div>
+        <div class="audit-card"><div class="audit-val" style="color:var(--yellow-medium)">${a.medium ?? 0}</div><div class="audit-label">Medium Alerts</div></div>
+        <div class="audit-card"><div class="audit-val" style="color:var(--green-low)">${a.total ?? 0}</div><div class="audit-label">Total Alerts</div></div>
+        <div class="audit-card"><div class="audit-val" style="color:#f59e0b">${rep.lockouts.active ?? 0}</div><div class="audit-label">Active Lockouts</div></div>
+        <div class="audit-card"><div class="audit-val" style="color:var(--color-accent)">${rep.blocklist.total ?? 0}</div><div class="audit-label">Blocked IPs</div></div>
+        <div class="audit-card"><div class="audit-val" style="color:var(--red-critical)">${a.unresolved ?? 0}</div><div class="audit-label">Unresolved Alerts</div></div>
+      `;
+
+                const recent = rep.recentUnresolvedAlerts || [];
+                if (recent.length) {
+                    recentBody.innerHTML = recent.map(a => `
+          <tr>
+            <td><span class="alert-type-label">${a.alert_type}</span></td>
+            <td style="font-size:0.85rem;">${a.description || '—'}</td>
+            <td>${severityBadge(a.severity)}</td>
+            <td style="font-size:0.8rem;color:var(--color-muted)">${a.createdAt}</td>
+          </tr>`).join('');
+                } else {
+                    recentBody.innerHTML = '<tr><td colspan="4"><div class="empty-state"><div class="empty-icon">✅</div><p>No unresolved alerts</p></div></td></tr>';
+                }
+            } catch (e) {
+                grid.innerHTML = `<div style="color:var(--red-critical)">Error: ${e.message}</div>`;
+                recentBody.innerHTML = '';
+            }
+        }
+
+        // ── Page Init ──
+        document.addEventListener('DOMContentLoaded', function () {
+            loadStats();
+            loadAlerts();
+            // Auto-refresh stats every 30 seconds
+            setInterval(loadStats, 30000);
+        });
+    </script>
+</body>
+
+</html>

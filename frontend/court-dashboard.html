@@ -54,11 +54,14 @@
       </div>
     </div>
   </div>
+  <script src="env-config.js"></script>
 
   <script src="config.js"></script>
+  <script src="evidence-api.js"></script>
+  <script src="enhanced-features.js"></script>
   <script src="app.js"></script>
   <script>
-    function searchCase() {
+    async function searchCase() {
       const caseId = document.getElementById('caseSearch').value.trim();
       const listDiv = document.getElementById('evidenceList');
 
@@ -67,27 +70,40 @@
         return;
       }
 
-      listDiv.innerHTML = '<p class="info">Searching for evidence...</p>';
+      listDiv.innerHTML = '<p class="info">Searching for evidence in database...</p>';
 
       try {
-        const evidences = BlockchainStorage.getEvidenceByCaseId(caseId);
+        const evidences = await EvidenceAPI.getEvidenceByCaseId(caseId);
         
         if (evidences.length === 0) {
           listDiv.innerHTML = '<p class="info">No evidence found for this Case ID</p>';
           return;
         }
 
-        let html = '<table class="evidence-table"><thead><tr><th>Index</th><th>Case ID</th><th>Hash</th><th>IPFS CID</th><th>Investigator</th><th>Timestamp</th></tr></thead><tbody>';
+        let html = '<table class="evidence-table"><thead><tr><th>ID</th><th>Case ID</th><th>File Name</th><th>Hash</th><th>IPFS CID</th><th>Investigator</th><th>Status</th><th>Timestamp</th><th>Actions</th></tr></thead><tbody>';
         
         evidences.forEach(evidence => {
+          const statusColor = {
+            'pending': '#fbbf24',
+            'verified': '#10b981',
+            'rejected': '#f87171',
+            'archived': '#9ca3af'
+          }[evidence.status] || '#9ca3af';
+          
           html += `
             <tr>
-              <td>${evidence.index}</td>
+              <td>#${evidence.id}</td>
               <td><strong>${evidence.caseId}</strong></td>
-              <td class="hash-cell">${evidence.evidenceHash}</td>
-              <td class="hash-cell">${evidence.ipfsCID}</td>
-              <td class="address-cell">${evidence.investigator}</td>
-              <td>${new Date(evidence.timestamp).toLocaleString()}</td>
+              <td>${evidence.fileName}</td>
+              <td class="hash-cell" title="${evidence.evidenceHash}">${evidence.evidenceHash.substring(0, 16)}...</td>
+              <td class="hash-cell" title="${evidence.ipfsCID}">${evidence.ipfsCID.substring(0, 16)}...</td>
+              <td>${evidence.investigatorId}</td>
+              <td><span style="color: ${statusColor}; font-weight: bold;">${evidence.status}</span></td>
+              <td>${evidence.createdAtReadable || new Date(evidence.createdAt).toLocaleString()}</td>
+              <td>
+                <a href="verify-evidence.html?evidenceId=${evidence.id}" class="btn-secondary" style="padding: 4px 8px; font-size: 0.85rem;">Verify</a>
+                <a href="${CONFIG.IPFS.GATEWAY}${evidence.ipfsCID}" target="_blank" class="btn-secondary" style="padding: 4px 8px; font-size: 0.85rem;">View</a>
+              </td>
             </tr>
           `;
         });
@@ -96,20 +112,25 @@
         listDiv.innerHTML = html;
       } catch (error) {
         listDiv.innerHTML = `<p class="error">Error searching evidence: ${error.message}</p>`;
+        console.error('Error searching evidence:', error);
       }
     }
 
-    function checkSystemStatus() {
+    async function checkSystemStatus() {
       const statusDiv = document.getElementById('systemStatus');
-      const count = getEvidenceCount();
-      statusDiv.innerHTML = `
-        <p class="success">✓ System Operational</p>
-        <p><strong>Total Evidence Records:</strong> ${count}</p>
-      `;
+      try {
+        const count = await getEvidenceCount();
+        statusDiv.innerHTML = `
+          <p class="success">✓ System Operational</p>
+          <p><strong>Total Evidence Records:</strong> ${count}</p>
+        `;
+      } catch (error) {
+        statusDiv.innerHTML = `<p class="error">Error loading status: ${error.message}</p>`;
+      }
     }
 
-    document.addEventListener('DOMContentLoaded', function() {
-      checkSystemStatus();
+    document.addEventListener('DOMContentLoaded', async function() {
+      await checkSystemStatus();
     });
   </script>
 </body>

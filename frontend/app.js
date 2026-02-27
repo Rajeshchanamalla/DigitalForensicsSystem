@@ -25,14 +25,19 @@ async function login() {
         // Verify credentials from MySQL database
         const verification = await UserManagement.verifyUser(userId, password, role);
         const loginSuccess = verification.valid === true;
-        
+
         // Store login attempt in MySQL database via API
         Database.insertLoginLog(userId, role, loginSuccess).catch(err => {
             console.error('Failed to log login attempt:', err);
             // Continue even if logging fails
         });
-        
+
         if (loginSuccess) {
+            // Store JWT token if provided
+            if (verification.token) {
+                EnhancedFeatures.setToken(verification.token);
+            }
+
             // Store user session
             Session.setCurrentUser({
                 userId: userId,
@@ -57,7 +62,7 @@ async function login() {
 
 // Redirect to appropriate dashboard based on role
 function redirectToDashboard(role) {
-    switch(role) {
+    switch (role) {
         case CONFIG.ROLES.INVESTIGATOR:
             window.location.href = "investigator-dashboard.html";
             break;
@@ -87,18 +92,19 @@ function checkAuth() {
 // Logout function
 function logout() {
     Session.clearSession();
+    EnhancedFeatures.clearToken();
     window.location.href = "login.html";
 }
 
 // Generate SHA-256 hash of file
 async function generateHash(file) {
     try {
-  const buffer = await file.arrayBuffer();
-  const hashBuffer = await crypto.subtle.digest("SHA-256", buffer);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const hashHex = hashArray
-    .map(b => b.toString(16).padStart(2, "0"))
-    .join("");
+        const buffer = await file.arrayBuffer();
+        const hashBuffer = await crypto.subtle.digest("SHA-256", buffer);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const hashHex = hashArray
+            .map(b => b.toString(16).padStart(2, "0"))
+            .join("");
         return hashHex;
     } catch (error) {
         console.error("Hash generation error:", error);
@@ -113,10 +119,10 @@ async function uploadToIPFS(file) {
         const isPinata = apiUrl.includes('pinata.cloud');
         const isWeb3Storage = apiUrl.includes('web3.storage');
         const isLocalIPFS = apiUrl.includes('localhost') || apiUrl.includes('127.0.0.1');
-        
+
         let headers = {};
         let formData = new FormData();
-        
+
         // Prepare request based on IPFS provider
         if (isPinata) {
             // Pinata IPFS
@@ -155,7 +161,7 @@ async function uploadToIPFS(file) {
 
         if (!response.ok) {
             const errorText = await response.text();
-            
+
             // Provide helpful error messages
             if (response.status === 401) {
                 if (isLocalIPFS) {
@@ -170,12 +176,12 @@ async function uploadToIPFS(file) {
                     throw new Error('IPFS service unavailable. Please try again later or use local IPFS node.');
                 }
             }
-            
+
             throw new Error(`IPFS upload failed: ${response.status} - ${errorText}`);
         }
 
         const result = await response.json();
-        
+
         // Extract CID from response (different providers return different formats)
         let cid = null;
         if (result.Hash) {
@@ -187,21 +193,21 @@ async function uploadToIPFS(file) {
         } else if (Array.isArray(result) && result[0] && result[0].Hash) {
             cid = result[0].Hash; // Some IPFS APIs return array
         }
-        
+
         if (!cid) {
             console.error('IPFS response:', result);
             throw new Error('CID not found in IPFS response. Response: ' + JSON.stringify(result));
         }
 
         console.log('File uploaded to IPFS. CID:', cid);
-        
+
         // Files are uploaded but not pinned
         // Users can access files via gateway links
         return cid;
-        
+
     } catch (error) {
         console.error('IPFS upload error:', error);
-        
+
         // Provide helpful error message
         if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError') || error.message.includes('CORS')) {
             const isLocalIPFS = CONFIG.IPFS.API_URL.includes('localhost') || CONFIG.IPFS.API_URL.includes('127.0.0.1');
@@ -211,12 +217,12 @@ async function uploadToIPFS(file) {
                 throw new Error('Network error. Please check your internet connection or use local IPFS node.');
             }
         }
-        
+
         throw error;
     }
 }
 
-// Upload evidence (simulated blockchain storage)
+// Upload evidence (Enhanced with multi-file, encryption, categories)
 async function uploadEvidence() {
     const fileInput = document.getElementById("fileInput");
     const caseIdInput = document.getElementById("caseId");
@@ -231,11 +237,15 @@ async function uploadEvidence() {
     ipfsOutput.innerText = "";
     txOutput.innerText = "";
 
-    const file = fileInput.files[0];
+    const files = fileInput.files;
     const caseId = caseIdInput.value.trim();
+    const category = document.getElementById("category")?.value || null;
+    const tags = document.getElementById("tags")?.value.trim() || null;
+    const description = document.getElementById("description")?.value.trim() || null;
+    const encryptFile = document.getElementById("encryptFile")?.checked || false;
 
-    if (!file) {
-        statusDiv.innerHTML = "<p class='error'>Please select a file</p>";
+    if (!files || files.length === 0) {
+        statusDiv.innerHTML = "<p class='error'>Please select at least one file</p>";
         return;
     }
 
@@ -244,38 +254,83 @@ async function uploadEvidence() {
         return;
     }
 
-    // Check if Case ID already exists
-    const existingEvidence = BlockchainStorage.getEvidenceByCaseId(caseId);
-    if (existingEvidence && existingEvidence.length > 0) {
-        statusDiv.innerHTML = `<p class='error'>Case ID "${caseId}" already exists! Please use a different Case ID or add evidence to the existing case.</p>`;
-        return;
+    // Process multiple files
+    const user = Session.getCurrentUser();
+    const investigator = user ? user.userId : 'Unknown';
+    let encryptionKey = null;
+
+    if (encryptFile) {
+        encryptionKey = EnhancedFeatures.generateEncryptionKey();
+        statusDiv.innerHTML = "<p class='info'>Encryption key generated. Keep it safe!</p>";
     }
 
-    try {
-        statusDiv.innerHTML = "<p class='info'>Processing evidence...</p>";
+    // Upload each file
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        await uploadSingleFile(file, caseId, investigator, category, tags, description, encryptFile, encryptionKey, i + 1, files.length);
+    }
+}
 
-        // Step 1: Generate hash
-        statusDiv.innerHTML = "<p class='info'>Step 1/4: Generating SHA-256 hash...</p>";
-        const evidenceHash = await generateHash(file);
+// Upload single file
+async function uploadSingleFile(file, caseId, investigator, category, tags, description, encryptFile, encryptionKey, fileNum, totalFiles) {
+    const statusDiv = document.getElementById("uploadStatus");
+    const hashOutput = document.getElementById("hashOutput");
+    const ipfsOutput = document.getElementById("ipfsOutput");
+    const txOutput = document.getElementById("txOutput");
+
+    // Note: We allow multiple evidence per case ID, so no need to check for duplicates
+    // If you want to prevent duplicates, uncomment below:
+    // try {
+    //     const existingEvidence = await EvidenceAPI.getEvidenceByCaseId(caseId);
+    //     if (existingEvidence && existingEvidence.length > 0) {
+    //         statusDiv.innerHTML = `<p class='error'>Case ID "${caseId}" already has ${existingEvidence.length} evidence record(s). You can add more evidence to this case.</p>`;
+    //         return;
+    //     }
+    // } catch (error) {
+    //     console.error("Error checking existing evidence:", error);
+    //     // Continue anyway
+    // }
+
+    try {
+        statusDiv.innerHTML = `<p class='info'>Processing file ${fileNum}/${totalFiles}: ${file.name}...</p>`;
+
+        let fileToUpload = file;
+        let isEncrypted = false;
+
+        // Step 1: Encrypt file if requested
+        if (encryptFile && encryptionKey) {
+            statusDiv.innerHTML = `<p class='info'>File ${fileNum}/${totalFiles}: Encrypting file...</p>`;
+            try {
+                fileToUpload = await EnhancedFeatures.encryptFile(file, encryptionKey);
+                isEncrypted = true;
+                console.log("File encrypted successfully");
+            } catch (encryptError) {
+                console.error("Encryption failed:", encryptError);
+                statusDiv.innerHTML = `<p class='error'>Encryption failed: ${encryptError.message}</p>`;
+                return;
+            }
+        }
+
+        // Step 2: Generate hash (of original file, not encrypted)
+        statusDiv.innerHTML = `<p class='info'>File ${fileNum}/${totalFiles}: Generating SHA-256 hash...</p>`;
+        const evidenceHash = await generateHash(file); // Hash original file
         hashOutput.innerText = evidenceHash;
         console.log("Evidence hash:", evidenceHash);
 
-        // Step 2: Upload to IPFS and get real CID
-        statusDiv.innerHTML = "<p class='info'>Step 2/4: Uploading file to IPFS...</p>";
+        // Step 3: Upload to IPFS and get real CID
+        statusDiv.innerHTML = `<p class='info'>File ${fileNum}/${totalFiles}: Uploading to IPFS...</p>`;
         let ipfsCID;
         try {
-            const uploadResult = await uploadToIPFS(file);
-            // Handle both string CID and object with cid property
+            const uploadResult = await uploadToIPFS(fileToUpload);
             ipfsCID = typeof uploadResult === 'string' ? uploadResult : (uploadResult.cid || uploadResult);
-            
-            // Create gateway link only
+
             const ipfsLinks = `
                 <div style="margin-top: 10px;">
                     <a href="${CONFIG.IPFS.GATEWAY}${ipfsCID}" target="_blank" class="btn-secondary" style="display: inline-block; text-decoration: none; padding: 8px 15px;">🌐 View on Gateway</a>
                 </div>
-                <small style="display: block; margin-top: 5px; color: #9ca3af;">CID: ${ipfsCID}</small>
+                <small style="display: block; margin-top: 5px; color: #9ca3af;">CID: ${ipfsCID}${isEncrypted ? ' (Encrypted)' : ''}</small>
             `;
-            
+
             ipfsOutput.innerHTML = `<span class="hash-display">${ipfsCID}</span>${ipfsLinks}`;
             console.log("IPFS CID:", ipfsCID);
         } catch (ipfsError) {
@@ -284,38 +339,52 @@ async function uploadEvidence() {
             return;
         }
 
-        // Step 3: Store in simulated blockchain
-        statusDiv.innerHTML = "<p class='info'>Step 3/4: Storing evidence metadata...</p>";
-        const user = Session.getCurrentUser();
-        const investigator = user ? user.userId : 'Unknown';
-        
-        const evidence = BlockchainStorage.addEvidence(caseId, evidenceHash, ipfsCID, investigator);
-        
-        // Generate simulated transaction hash
-        const txHash = '0x' + Array.from(crypto.getRandomValues(new Uint8Array(32)))
-            .map(b => b.toString(16).padStart(2, "0"))
-            .join("");
-        
-        txOutput.innerHTML = `<span class="hash-display">${txHash}</span>`;
-        
-        // Step 4: Complete
-        statusDiv.innerHTML = "<p class='success'>✓ Evidence successfully uploaded to IPFS and stored!</p><p class='info'>File is now available on IPFS network. CID: " + ipfsCID + "</p>";
-        
-        // Store evidence info locally for verification
-        const evidenceInfo = {
+        // Step 4: Store in MySQL database
+        statusDiv.innerHTML = `<p class='info'>File ${fileNum}/${totalFiles}: Storing evidence metadata in database...</p>`;
+
+        // Prepare evidence data for database
+        const evidenceData = {
             caseId: caseId,
-            hash: evidenceHash,
-            ipfsCID: ipfsCID,
             fileName: file.name,
             fileSize: file.size,
-            uploadTime: new Date().toISOString(),
-            txHash: txHash,
-            index: evidence.index
+            fileType: file.type || null,
+            evidenceHash: evidenceHash,
+            ipfsCID: ipfsCID,
+            investigatorId: investigator,
+            description: description,
+            category: category,
+            tags: tags,
+            encrypt: isEncrypted,
+            encryptionKey: isEncrypted ? encryptionKey : null
         };
-        
-        let evidenceList = JSON.parse(localStorage.getItem('evidenceList') || '[]');
-        evidenceList.push(evidenceInfo);
-        localStorage.setItem('evidenceList', JSON.stringify(evidenceList));
+
+        try {
+            // Store in database via API
+            const result = await EvidenceAPI.addEvidence(evidenceData);
+
+            // Generate transaction hash for display (simulated)
+            const txHash = '0x' + Array.from(crypto.getRandomValues(new Uint8Array(32)))
+                .map(b => b.toString(16).padStart(2, "0"))
+                .join("");
+
+            txOutput.innerHTML = `<span class="hash-display">${txHash}</span>`;
+
+            // Step 5: Complete
+            if (fileNum === totalFiles) {
+                statusDiv.innerHTML = `<p class='success'>✓ All ${totalFiles} file(s) successfully uploaded to IPFS and stored in database!</p><p class='info'>Files are now available on IPFS network.</p>${isEncrypted ? '<p class="warning">⚠️ IMPORTANT: Save your encryption key: ' + encryptionKey + '</p>' : ''}`;
+
+                // Clear form after all files uploaded
+                document.getElementById("fileInput").value = '';
+                document.getElementById("caseId").value = '';
+                if (document.getElementById("description")) document.getElementById("description").value = '';
+                if (document.getElementById("tags")) document.getElementById("tags").value = '';
+            } else {
+                statusDiv.innerHTML = `<p class='success'>✓ File ${fileNum}/${totalFiles} uploaded successfully. Processing next file...</p>`;
+            }
+        } catch (dbError) {
+            console.error("Database storage error:", dbError);
+            statusDiv.innerHTML = `<p class='error'>IPFS upload successful, but database storage failed: ${dbError.message}. Please contact administrator.</p>`;
+        }
 
     } catch (error) {
         console.error("Upload error:", error);
@@ -323,20 +392,56 @@ async function uploadEvidence() {
     }
 }
 
-// Retrieve evidence from simulated blockchain
-function retrieveEvidence(index) {
-    const evidence = BlockchainStorage.getEvidence(index);
-    if (!evidence) {
-        throw new Error("Evidence not found");
+// Retrieve evidence from database by ID
+async function retrieveEvidence(id) {
+    try {
+        const evidence = await EvidenceAPI.getEvidenceById(id);
+        if (!evidence) {
+            throw new Error("Evidence not found");
+        }
+        return {
+            id: evidence.id,
+            caseId: evidence.caseId,
+            evidenceHash: evidence.evidenceHash,
+            ipfsCID: evidence.ipfsCID,
+            fileName: evidence.fileName,
+            fileSize: evidence.fileSize,
+            fileType: evidence.fileType,
+            timestamp: evidence.createdAtReadable || new Date(evidence.createdAt).toLocaleString(),
+            investigator: evidence.investigatorId,
+            status: evidence.status,
+            description: evidence.description,
+            category: evidence.category,
+            tags: evidence.tags
+        };
+    } catch (error) {
+        console.error("Error retrieving evidence:", error);
+        throw error;
     }
-    return {
-        caseId: evidence.caseId,
-        evidenceHash: evidence.evidenceHash,
-        ipfsCID: evidence.ipfsCID,
-        timestamp: new Date(evidence.timestamp).toLocaleString(),
-        investigator: evidence.investigator,
-        index: evidence.index
-    };
+}
+
+// Retrieve evidence by index (for backward compatibility - gets all and returns by index)
+async function retrieveEvidenceByIndex(index) {
+    try {
+        const allEvidence = await EvidenceAPI.getAllEvidence({ limit: index + 1 });
+        if (index >= allEvidence.length) {
+            throw new Error("Evidence index out of bounds");
+        }
+        const evidence = allEvidence[index];
+        return {
+            id: evidence.id,
+            caseId: evidence.caseId,
+            evidenceHash: evidence.evidenceHash,
+            ipfsCID: evidence.ipfsCID,
+            fileName: evidence.fileName,
+            timestamp: evidence.createdAtReadable || new Date(evidence.createdAt).toLocaleString(),
+            investigator: evidence.investigatorId,
+            index: index
+        };
+    } catch (error) {
+        console.error("Error retrieving evidence by index:", error);
+        throw error;
+    }
 }
 
 // Retrieve file from IPFS using CID
@@ -344,18 +449,18 @@ async function retrieveFileFromIPFS(cid) {
     try {
         // Construct IPFS gateway URL
         const ipfsUrl = `${CONFIG.IPFS.GATEWAY}${cid}`;
-        
+
         // Fetch file from IPFS
         const response = await fetch(ipfsUrl);
-        
+
         if (!response.ok) {
             throw new Error(`Failed to retrieve file from IPFS: ${response.status}`);
         }
-        
+
         // Return file as blob
         const blob = await response.blob();
         return blob;
-        
+
     } catch (error) {
         console.error("IPFS retrieval error:", error);
         throw new Error(`Failed to retrieve file from IPFS: ${error.message}`);
@@ -363,14 +468,48 @@ async function retrieveFileFromIPFS(cid) {
 }
 
 // Verify evidence integrity
+// Verify evidence integrity
 async function verifyEvidence(file, storedHash) {
     try {
+        // 1. Calculate hash of the file locally for UI display
         const computedHash = await generateHash(file);
+
+        // 2. call Backend to verify against Blockchain
+        // We accept the file's hash and check if it matches the blockchain record for the *storedHash* or just verify existence.
+        // The backend `verifyEvidenceOnBlockchain` takes (evidenceHash, ipfsCID).
+        // Since we might not have the IPFS CID here easily without fetching, let's just send the hash.
+
+        // Actually, let's try to verify if the *computed hash* exists on the blockchain.
+        const response = await fetch(`${CONFIG.API.BASE_URL}/evidence/verify`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                hash: computedHash
+            })
+        });
+
+        if (!response.ok) {
+            // Fallback to local comparison if backend fails or network issue
+            console.warn('Backend verification failed, falling back to local');
+            return {
+                isValid: computedHash.toLowerCase() === storedHash.toLowerCase(),
+                computedHash: computedHash,
+                storedHash: storedHash,
+                blockchainData: null
+            };
+        }
+
+        const result = await response.json();
+
         return {
-            isValid: computedHash.toLowerCase() === storedHash.toLowerCase(),
+            isValid: result.verified && (computedHash.toLowerCase() === storedHash.toLowerCase()),
             computedHash: computedHash,
-            storedHash: storedHash
+            storedHash: storedHash,
+            blockchainData: result.onChainData // includes blockchainId now
         };
+
     } catch (error) {
         console.error("Verification error:", error);
         throw error;
@@ -378,8 +517,14 @@ async function verifyEvidence(file, storedHash) {
 }
 
 // Get evidence count
-function getEvidenceCount() {
-    return BlockchainStorage.getEvidenceCount();
+async function getEvidenceCount() {
+    try {
+        const stats = await EvidenceAPI.getStatistics();
+        return stats.total || 0;
+    } catch (error) {
+        console.error("Error getting evidence count:", error);
+        return 0;
+    }
 }
 
 // Format timestamp
@@ -402,7 +547,7 @@ function displayUserInfo() {
 }
 
 // Initialize page
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     // Check authentication for protected pages
     const currentPage = window.location.pathname.split('/').pop();
     if (currentPage !== 'login.html' && !currentPage.includes('login')) {

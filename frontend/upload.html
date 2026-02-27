@@ -31,9 +31,33 @@
       </div>
 
       <div class="form-group">
-        <label for="fileInput">Select Evidence File *</label>
-        <input type="file" id="fileInput" accept="*/*" required>
-        <small>Select the digital evidence file to upload</small>
+        <label for="fileInput">Select Evidence File(s) *</label>
+        <input type="file" id="fileInput" accept="*/*" multiple required>
+        <small>Select one or more digital evidence files to upload</small>
+      </div>
+
+      <div class="form-group">
+        <label for="category">Category</label>
+        <select id="category">
+          <option value="">Select category...</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="tags">Tags (comma-separated)</label>
+        <input type="text" id="tags" placeholder="e.g., important, photo, document">
+      </div>
+
+      <div class="form-group">
+        <label for="description">Description</label>
+        <textarea id="description" rows="3" placeholder="Optional description of the evidence"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label>
+          <input type="checkbox" id="encryptFile"> Encrypt file before upload
+        </label>
+        <small style="display: block; margin-top: 5px;">Files will be encrypted with AES-256 before uploading to IPFS</small>
       </div>
 
       <div id="fileInfo" class="file-info" style="display: none;">
@@ -67,17 +91,47 @@
       </div>
     </div>
   </div>
+  <script src="env-config.js"></script>
 
   <script src="config.js"></script>
+  <script src="evidence-api.js"></script>
+  <script src="enhanced-features.js"></script>
   <script src="app.js"></script>
   <script>
-    // Display file info when file is selected
+    // Load categories on page load
+    async function loadCategories() {
+      try {
+        const categories = await EnhancedFeatures.getCategories();
+        const categorySelect = document.getElementById('category');
+        categories.forEach(cat => {
+          const option = document.createElement('option');
+          option.value = cat.name;
+          option.textContent = cat.name;
+          categorySelect.appendChild(option);
+        });
+      } catch (error) {
+        console.error('Error loading categories:', error);
+      }
+    }
+
+    // Display file info when files are selected
     document.getElementById('fileInput').addEventListener('change', function(e) {
-      const file = e.target.files[0];
-      if (file) {
-        document.getElementById('fileInfo').style.display = 'block';
-        document.getElementById('fileName').textContent = file.name;
-        document.getElementById('fileSize').textContent = formatFileSize(file.size);
+      const files = e.target.files;
+      const fileInfo = document.getElementById('fileInfo');
+      
+      if (files && files.length > 0) {
+        fileInfo.style.display = 'block';
+        if (files.length === 1) {
+          document.getElementById('fileName').textContent = files[0].name;
+          document.getElementById('fileSize').textContent = formatFileSize(files[0].size);
+        } else {
+          let totalSize = 0;
+          Array.from(files).forEach(file => totalSize += file.size);
+          document.getElementById('fileName').textContent = `${files.length} files selected`;
+          document.getElementById('fileSize').textContent = formatFileSize(totalSize);
+        }
+      } else {
+        fileInfo.style.display = 'none';
       }
     });
 
@@ -88,6 +142,9 @@
       const i = Math.floor(Math.log(bytes) / Math.log(k));
       return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
     }
+
+    // Load categories on page load
+    document.addEventListener('DOMContentLoaded', loadCategories);
   </script>
 </body>
 </html>

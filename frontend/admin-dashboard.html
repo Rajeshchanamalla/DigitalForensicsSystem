@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin Dashboard - Digital Forensics</title>
   <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
   <nav class="navbar">
     <div class="nav-container">
@@ -14,6 +16,7 @@
         <a href="admin-dashboard.html" class="active">Dashboard</a>
         <a href="user-management.html">User Management</a>
         <a href="login-logs.html">Login Logs</a>
+        <a href="security-dashboard.html" style="color:#f97316;font-weight:600;">🔐 Security</a>
         <a href="#" onclick="logout()">Logout</a>
       </div>
     </div>
@@ -45,9 +48,15 @@
       </div>
 
       <div class="dashboard-card">
-        <h3>⚙️ System Configuration</h3>
-        <p>System settings and configuration</p>
-        <p class="info">All evidence stored securely in system storage</p>
+        <h3>📊 Advanced Analytics</h3>
+        <p>View comprehensive evidence analytics with charts and insights</p>
+        <a href="advanced-analytics.html" class="btn-primary">View Analytics</a>
+      </div>
+
+      <div class="dashboard-card" style="border-top: 3px solid #f97316;">
+        <h3>🔐 Security Center</h3>
+        <p>Monitor threats, manage locked accounts &amp; IP blocklist</p>
+        <a href="security-dashboard.html" class="btn-primary" style="background:#f97316;">Open Security Center</a>
       </div>
     </div>
 
@@ -66,36 +75,82 @@
           <h3>System Status</h3>
           <p id="systemStatus">-</p>
         </div>
+        <div class="stat-card">
+          <h3>Verified Evidence</h3>
+          <p id="verifiedEvidence" style="color: #10b981;">-</p>
+        </div>
+        <div class="stat-card">
+          <h3>Pending Evidence</h3>
+          <p id="pendingEvidence" style="color: #fbbf24;">-</p>
+        </div>
+        <div class="stat-card">
+          <h3>Unique Cases</h3>
+          <p id="uniqueCases">-</p>
+        </div>
       </div>
     </div>
   </div>
+  <script src="env-config.js"></script>
 
   <script src="config.js"></script>
+  <script src="database.js"></script>
+  <script src="evidence-api.js"></script>
+  <script src="enhanced-features.js"></script>
   <script src="app.js"></script>
   <script>
-    function loadSystemOverview() {
+    async function loadSystemOverview() {
       const overviewDiv = document.getElementById('systemOverview');
-      const count = getEvidenceCount();
-      const users = Object.keys(UserManagement.getAllUsers()).length;
-      overviewDiv.innerHTML = `
-        <p><strong>Total Evidence Records:</strong> ${count}</p>
-        <p><strong>Registered Users:</strong> ${users}</p>
-        <p><strong>Storage:</strong> Local Storage</p>
-      `;
+      try {
+        const evidenceStats = await EvidenceAPI.getStatistics();
+        const users = await UserManagement.getAllUsers();
+        const userCount = Object.keys(users).length;
+
+        overviewDiv.innerHTML = `
+          <p><strong>Total Evidence Records:</strong> ${evidenceStats.total || 0}</p>
+          <p><strong>Verified Evidence:</strong> ${evidenceStats.verified || 0}</p>
+          <p><strong>Pending Evidence:</strong> ${evidenceStats.pending || 0}</p>
+          <p><strong>Registered Users:</strong> ${userCount}</p>
+          <p><strong>Unique Cases:</strong> ${evidenceStats.uniqueCases || 0}</p>
+          <p><strong>Storage:</strong> MySQL Database + IPFS</p>
+        `;
+      } catch (error) {
+        overviewDiv.innerHTML = `<p class="error">Error loading overview: ${error.message}</p>`;
+        console.error('Error loading system overview:', error);
+      }
     }
 
-    function loadStatistics() {
-      const count = getEvidenceCount();
-      document.getElementById('totalEvidence').textContent = count;
-      document.getElementById('activeUsers').textContent = Object.keys(UserManagement.getAllUsers()).length;
-      document.getElementById('systemStatus').innerHTML = '<span class="success">✓ Operational</span>';
+    async function loadStatistics() {
+      try {
+        const evidenceStats = await EvidenceAPI.getStatistics();
+        const users = await UserManagement.getAllUsers();
+
+        document.getElementById('totalEvidence').textContent = evidenceStats.total || 0;
+        document.getElementById('activeUsers').textContent = Object.keys(users).length;
+        document.getElementById('verifiedEvidence').textContent = evidenceStats.verified || 0;
+        document.getElementById('pendingEvidence').textContent = evidenceStats.pending || 0;
+        document.getElementById('uniqueCases').textContent = evidenceStats.uniqueCases || 0;
+        document.getElementById('systemStatus').innerHTML = '<span class="success">✓ Operational</span>';
+      } catch (error) {
+        console.error('Error loading statistics:', error);
+        document.getElementById('totalEvidence').textContent = '-';
+        document.getElementById('activeUsers').textContent = '-';
+        document.getElementById('verifiedEvidence').textContent = '-';
+        document.getElementById('pendingEvidence').textContent = '-';
+        document.getElementById('uniqueCases').textContent = '-';
+        document.getElementById('systemStatus').innerHTML = '<span class="error">✗ Error</span>';
+      }
     }
 
-    document.addEventListener('DOMContentLoaded', function() {
-      loadSystemOverview();
-      loadStatistics();
+    function viewEvidenceStats() {
+      // Could navigate to a detailed statistics page or show modal
+      alert('Detailed statistics feature - Coming soon!\n\nCurrent stats:\n- Total Evidence\n- Verified/Pending/Rejected\n- Top Investigators\n- Top Cases');
+    }
+
+    document.addEventListener('DOMContentLoaded', async function () {
+      await loadSystemOverview();
+      await loadStatistics();
     });
   </script>
 </body>
-</html>
 
+</html>

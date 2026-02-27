@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Analyst Dashboard - Digital Forensics</title>
   <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
   <nav class="navbar">
     <div class="nav-container">
@@ -25,6 +27,7 @@
     </div>
 
     <div class="dashboard-grid">
+      <!-- Existing cards -->
       <div class="dashboard-card">
         <h3>🔍 Verify Evidence Integrity</h3>
         <p>Verify the integrity of evidence files by comparing recomputed hashes</p>
@@ -32,15 +35,30 @@
       </div>
 
       <div class="dashboard-card">
-        <h3> View Evidence Records</h3>
-        <p>Retrieve and view evidence metadata from storage</p>
-        <button onclick="loadAllEvidence()" class="btn-secondary">View All Records</button>
+        <h3>📂 Case Final Reports</h3>
+        <p>Upload and Manage Final Case Documentation</p>
+        <div class="upload-mini-form">
+          <input type="text" id="reportCaseId" placeholder="Case ID (e.g. CASE-001)" class="form-control mb-2">
+          <input type="file" id="reportFile" class="form-control mb-2">
+          <button onclick="uploadCaseReport()" class="btn-primary" style="width: 100%">Upload Report</button>
+          <div id="reportStatus" class="status-message"></div>
+        </div>
       </div>
 
       <div class="dashboard-card">
-        <h3> Statistics</h3>
-        <p id="statistics">Loading statistics...</p>
-        <button onclick="loadStatistics()" class="btn-secondary">Refresh</button>
+        <h3> View Evidence Records</h3>
+        <p>Retrieve and view evidence metadata from storage</p>
+        <button onclick="loadAllEvidence()" class="btn-secondary">View All Records</button>
+        <br><br>
+        <button onclick="loadCaseReports()" class="btn-secondary">View Reports Only</button>
+      </div>
+    </div>
+
+    <!-- New Section for Case Reports -->
+    <div class="evidence-list-section" style="margin-bottom: 30px; border-top: 5px solid #4f46e5;">
+      <h2>📄 Case Final Reports</h2>
+      <div id="reportList" class="evidence-list">
+        <p class="info">Loading case reports...</p>
       </div>
     </div>
 
@@ -51,59 +69,208 @@
       </div>
     </div>
   </div>
+  <script src="env-config.js"></script>
 
   <script src="config.js"></script>
+  <script src="evidence-api.js"></script>
+  <script src="enhanced-features.js"></script>
   <script src="app.js"></script>
   <script>
-    function loadAllEvidence() {
+    async function loadAllEvidence() {
       const listDiv = document.getElementById('evidenceList');
-      listDiv.innerHTML = '<p class="info">Loading evidence records...</p>';
+      listDiv.innerHTML = '<p class="info">Loading evidence records from database...</p>';
 
       try {
-        const count = getEvidenceCount();
-        
-        if (count === 0) {
+        const evidenceList = await EvidenceAPI.getAllEvidence({ limit: 100 });
+
+        if (evidenceList.length === 0) {
           listDiv.innerHTML = '<p class="info">No evidence records found</p>';
           return;
         }
 
-        let html = '<table class="evidence-table"><thead><tr><th>Index</th><th>Case ID</th><th>Hash</th><th>IPFS CID</th><th>Investigator</th><th>Timestamp</th></tr></thead><tbody>';
-        
-        for (let i = 0; i < count; i++) {
-          try {
-            const evidence = retrieveEvidence(i);
-            html += `
-              <tr>
-                <td>${i}</td>
-                <td>${evidence.caseId}</td>
-                <td class="hash-cell">${evidence.evidenceHash.substring(0, 16)}...</td>
-                <td class="hash-cell">${evidence.ipfsCID.substring(0, 16)}...</td>
-                <td class="address-cell">${evidence.investigator}</td>
-                <td>${evidence.timestamp}</td>
-              </tr>
-            `;
-          } catch (error) {
-            console.error(`Error loading evidence ${i}:`, error);
-          }
-        }
-        
+        let html = '<table class="evidence-table"><thead><tr><th>ID</th><th>Case ID</th><th>File Name</th><th>Hash</th><th>IPFS CID</th><th>Investigator/Analyst</th><th>Status</th><th>Timestamp</th><th>Actions</th></tr></thead><tbody>';
+
+        evidenceList.forEach(evidence => {
+          const statusColor = {
+            'pending': '#fbbf24',
+            'verified': '#10b981',
+            'rejected': '#f87171',
+            'archived': '#9ca3af'
+          }[evidence.status] || '#9ca3af';
+
+          html += `
+            <tr>
+              <td>#${evidence.id}</td>
+              <td><strong>${evidence.caseId}</strong></td>
+              <td>${evidence.fileName}</td>
+              <td class="hash-cell" title="${evidence.evidenceHash}">${evidence.evidenceHash.substring(0, 16)}...</td>
+              <td class="hash-cell" title="${evidence.ipfsCID}">${evidence.ipfsCID.substring(0, 16)}...</td>
+              <td>${evidence.investigatorId}</td>
+              <td><span style="color: ${statusColor}; font-weight: bold;">${evidence.status}</span></td>
+              <td>${evidence.createdAtReadable || new Date(evidence.createdAt).toLocaleString()}</td>
+              <td>
+                <a href="verify-evidence.html?evidenceId=${evidence.id}" class="btn-secondary" style="padding: 4px 8px; font-size: 0.85rem;">Verify</a>
+                <a href="${CONFIG.IPFS.GATEWAY}${evidence.ipfsCID}" target="_blank" class="btn-secondary" style="padding: 4px 8px; font-size: 0.85rem;">View</a>
+              </td>
+            </tr>
+          `;
+        });
+
         html += '</tbody></table>';
         listDiv.innerHTML = html;
       } catch (error) {
-        listDiv.innerHTML = `<p class="error">Error loading evidence: ${error.message}</p>`;
+        listDiv.innerHTML = `<div class="error">
+          <h3>❌ Error Loading Evidence</h3>
+          <p>${error.message}</p>
+          <p><strong>Please make sure:</strong></p>
+          <ul style="text-align: left; display: inline-block;">
+            <li>Backend server is running: <code>npm run backend</code></li>
+            <li>MySQL database is running</li>
+            <li>Database schema is created</li>
+          </ul>
+        </div>`;
+        console.error('Error loading evidence:', error);
       }
     }
 
-    function loadStatistics() {
-      const statsDiv = document.getElementById('statistics');
-      const count = getEvidenceCount();
-      statsDiv.innerHTML = `<p><strong>Total Evidence Records:</strong> ${count}</p>`;
+    // --- NEW: Case Report Functions ---
+
+    async function uploadCaseReport() {
+      const statusDiv = document.getElementById('reportStatus');
+      const caseId = document.getElementById('reportCaseId').value.trim();
+      const fileInput = document.getElementById('reportFile');
+      const file = fileInput.files[0];
+
+      if (!caseId || !file) {
+        statusDiv.innerHTML = '<p class="error">Please enter Case ID and select a file.</p>';
+        return;
+      }
+
+      statusDiv.innerHTML = '<p class="info">Uploading report...</p>';
+      const btn = document.querySelector('button[onclick="uploadCaseReport()"]');
+      btn.disabled = true;
+
+      try {
+        // reuse app.js logic partially or call simpler flow
+
+        // 1. Hash
+        const computedHash = await generateHash(file);
+
+        // 2. IPFS
+        const cid = await uploadToIPFS(file);
+
+        // 3. Backend (as Evidence with category='Case Report')
+        // Get current user
+        const user = Session.getCurrentUser();
+        const investigatorId = user ? user.userId : 'Analyst';
+
+        const evidenceData = {
+          caseId: caseId,
+          fileName: file.fileName || file.name,
+          fileSize: file.size,
+          fileType: file.type,
+          evidenceHash: computedHash,
+          ipfsCID: cid,
+          investigatorId: investigatorId, // Acts as "Uploaded By"
+          category: 'Case Report',
+          description: 'Final Case Report generated by Analyst',
+          tags: 'report,analyst,final',
+          status: 'verified' // Auto-verify reports from analysts? Or keep pending. Let's keep pending or auto-verified.
+          // Actually server sets status to pending by default.
+        };
+
+        const result = await EvidenceAPI.addEvidence(evidenceData);
+
+        statusDiv.innerHTML = '<p class="success">✅ Report Uploaded!</p>';
+
+        // Clear inputs
+        document.getElementById('reportCaseId').value = '';
+        fileInput.value = '';
+
+        // Refresh list
+        loadCaseReports();
+
+      } catch (error) {
+        console.error('Report upload failed:', error);
+        statusDiv.innerHTML = `<p class="error">Upload failed: ${error.message}</p>`;
+      } finally {
+        btn.disabled = false;
+      }
     }
 
-    document.addEventListener('DOMContentLoaded', function() {
-      loadStatistics();
+    async function loadCaseReports() {
+      const listDiv = document.getElementById('reportList');
+      // listDiv.innerHTML = '<p class="info">Loading case reports...</p>'; // Optional, might flicker
+
+      try {
+        // Reuse search API or getAllEvidence
+        // Since we tagged them as 'Case Report', we can filter.
+        // Ideally backend would support category filter in getAllEvidence but it does not seem to based on my read (it had query params though).
+        // Let's check EvidenceAPI.getAllEvidence filters.
+        // app.js: getAllEvidence(filters). queryParams: status, category?
+        // view_file of server.js showed: /api/evidence?category=... YES it supports category in search? 
+        // wait, /api/evidence GET supports: caseId, investigatorId, status, limit, offset. NOT category.
+        // /api/evidence/search supports category.
+
+        // Let's use searchEvidence
+        const reports = await EvidenceAPI.searchEvidence({ category: 'Case Report' });
+
+        if (reports.length === 0) {
+          listDiv.innerHTML = '<p class="info">No case reports found.</p>';
+          return;
+        }
+
+        let html = '<table class="evidence-table"><thead><tr><th>Case ID</th><th>Report Name</th><th>Hash</th><th>CID</th><th>Uploader</th><th>Date</th><th>Action</th></tr></thead><tbody>';
+
+        reports.forEach(r => {
+          html += `
+                    <tr>
+                        <td><strong>${r.caseId}</strong></td>
+                        <td>${r.fileName}</td>
+                        <td title="${r.evidenceHash}">${r.evidenceHash.substring(0, 8)}...</td>
+                        <td title="${r.ipfsCID}">${r.ipfsCID.substring(0, 8)}...</td>
+                        <td>${r.investigatorId}</td>
+                        <td>${new Date(r.createdAt).toLocaleString()}</td>
+                        <td>
+                             <a href="${CONFIG.IPFS.GATEWAY}${r.ipfsCID}" target="_blank" class="btn-secondary" style="padding: 2px 6px;">View</a>
+                        </td>
+                    </tr>
+                `;
+        });
+        html += '</tbody></table>';
+        listDiv.innerHTML = html;
+
+      } catch (error) {
+        console.error('Error loading reports:', error);
+        listDiv.innerHTML = `<p class="error">Failed to load reports: ${error.message}</p>`;
+      }
+    }
+
+    // --- End New Functions ---
+
+    async function loadStatistics() {
+      const statsDiv = document.getElementById('statistics');
+      try {
+        const stats = await EvidenceAPI.getStatistics();
+        statsDiv.innerHTML = `
+          <p><strong>Total Evidence:</strong> ${stats.total || 0}</p>
+          <p><strong>Verified:</strong> ${stats.verified || 0}</p>
+          <p><strong>Pending:</strong> ${stats.pending || 0}</p>
+          <p><strong>Rejected:</strong> ${stats.rejected || 0}</p>
+          <p><strong>Unique Cases:</strong> ${stats.uniqueCases || 0}</p>
+        `;
+      } catch (error) {
+        statsDiv.innerHTML = `<p class="error">Error loading statistics: ${error.message}</p>`;
+        console.error('Error loading statistics:', error);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', async function () {
+      await loadStatistics();
+      await loadCaseReports(); // Load reports on start
     });
+
   </script>
 </body>
-</html>
 
+</html>

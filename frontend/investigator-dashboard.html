@@ -51,47 +51,94 @@
       </div>
     </div>
   </div>
+  <script src="env-config.js"></script>
 
   <script src="config.js"></script>
+  <script src="evidence-api.js"></script>
+  <script src="enhanced-features.js"></script>
   <script src="app.js"></script>
   <script>
-    function loadMyEvidence() {
-      const evidenceList = JSON.parse(localStorage.getItem('evidenceList') || '[]');
+    async function loadMyEvidence() {
       const listDiv = document.getElementById('evidenceList');
+      listDiv.innerHTML = '<p class="info">Loading evidence records from database...</p>';
       
-      if (evidenceList.length === 0) {
-        listDiv.innerHTML = '<p class="info">No evidence records found</p>';
-        return;
-      }
+      try {
+        const user = Session.getCurrentUser();
+        const investigatorId = user ? user.userId : null;
+        
+        const evidenceList = await EvidenceAPI.getAllEvidence({ 
+          investigatorId: investigatorId,
+          limit: 50 
+        });
+        
+        if (evidenceList.length === 0) {
+          listDiv.innerHTML = '<p class="info">No evidence records found. Upload your first evidence to get started!</p>';
+          return;
+        }
 
-      let html = '<table class="evidence-table"><thead><tr><th>Case ID</th><th>File Name</th><th>Hash</th><th>IPFS CID</th><th>Upload Time</th></tr></thead><tbody>';
-      
-      evidenceList.forEach(evidence => {
-        html += `
-          <tr>
-            <td>${evidence.caseId}</td>
-            <td>${evidence.fileName}</td>
-            <td class="hash-cell">${evidence.hash.substring(0, 16)}...</td>
-            <td class="hash-cell">${evidence.ipfsCID.substring(0, 16)}...</td>
-            <td>${new Date(evidence.uploadTime).toLocaleString()}</td>
-          </tr>
-        `;
-      });
-      
-      html += '</tbody></table>';
-      listDiv.innerHTML = html;
+        let html = '<table class="evidence-table"><thead><tr><th>ID</th><th>Case ID</th><th>File Name</th><th>Hash</th><th>IPFS CID</th><th>Status</th><th>Upload Time</th><th>Actions</th></tr></thead><tbody>';
+        
+        evidenceList.forEach(evidence => {
+          const statusColor = {
+            'pending': '#fbbf24',
+            'verified': '#10b981',
+            'rejected': '#f87171',
+            'archived': '#9ca3af'
+          }[evidence.status] || '#9ca3af';
+          
+          html += `
+            <tr>
+              <td>#${evidence.id}</td>
+              <td><strong>${evidence.caseId}</strong></td>
+              <td>${evidence.fileName}</td>
+              <td class="hash-cell" title="${evidence.evidenceHash}">${evidence.evidenceHash.substring(0, 16)}...</td>
+              <td class="hash-cell" title="${evidence.ipfsCID}">${evidence.ipfsCID.substring(0, 16)}...</td>
+              <td><span style="color: ${statusColor}; font-weight: bold;">${evidence.status}</span></td>
+              <td>${evidence.createdAtReadable || new Date(evidence.createdAt).toLocaleString()}</td>
+              <td>
+                <a href="${CONFIG.IPFS.GATEWAY}${evidence.ipfsCID}" target="_blank" class="btn-secondary" style="padding: 4px 8px; font-size: 0.85rem;">View</a>
+              </td>
+            </tr>
+          `;
+        });
+        
+        html += '</tbody></table>';
+        listDiv.innerHTML = html;
+      } catch (error) {
+        listDiv.innerHTML = `<div class="error">
+          <h3>❌ Error Loading Evidence</h3>
+          <p>${error.message}</p>
+          <p><strong>Please make sure:</strong></p>
+          <ul style="text-align: left; display: inline-block;">
+            <li>Backend server is running: <code>npm run backend</code></li>
+            <li>MySQL database is running</li>
+            <li>Database schema is created</li>
+          </ul>
+        </div>`;
+        console.error('Error loading evidence:', error);
+      }
     }
 
-    function checkSystemStatus() {
+    async function checkSystemStatus() {
       const statusDiv = document.getElementById('systemStatus');
-      const count = getEvidenceCount();
-      statusDiv.innerHTML = `<p class="success">✓ System Operational</p><p>Total Evidence Records: ${count}</p>`;
+      try {
+        const count = await getEvidenceCount();
+        const stats = await EvidenceAPI.getStatistics();
+        statusDiv.innerHTML = `
+          <p class="success">✓ System Operational</p>
+          <p><strong>Total Evidence:</strong> ${count}</p>
+          <p><strong>Verified:</strong> ${stats.verified || 0}</p>
+          <p><strong>Pending:</strong> ${stats.pending || 0}</p>
+        `;
+      } catch (error) {
+        statusDiv.innerHTML = `<p class="error">Error loading status: ${error.message}</p>`;
+      }
     }
 
     // Load evidence on page load
-    document.addEventListener('DOMContentLoaded', function() {
-      loadMyEvidence();
-      checkSystemStatus();
+    document.addEventListener('DOMContentLoaded', async function() {
+      await loadMyEvidence();
+      await checkSystemStatus();
     });
   </script>
 </body>

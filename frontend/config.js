@@ -1,4 +1,7 @@
-// Configuration file for the Digital Forensic System (Simplified for Initial Review)
+// Configuration file for the Digital Forensic System
+// API URL: reads from env-config.js (injected at deploy time), falls back to localhost
+const _runtimeConfig = (typeof window !== 'undefined' && window.APP_CONFIG) ? window.APP_CONFIG : {};
+
 const CONFIG = {
     // User roles
     ROLES: {
@@ -17,55 +20,42 @@ const CONFIG = {
     },
 
     // Backend API Configuration
+    // In production: reads from env-config.js which is generated at Vercel deploy time
     API: {
-        BASE_URL: 'http://localhost:3000/api'
+        BASE_URL: _runtimeConfig.API_BASE_URL || 'http://localhost:3000/api'
     },
 
     // IPFS Configuration
+    // Uses Pinata if keys are configured (production), falls back to local IPFS (development)
     IPFS: {
-        // Option 1: Local IPFS Node (RECOMMENDED - Install IPFS Desktop for easiest setup)
-        // Download from: https://github.com/ipfs/ipfs-desktop/releases
-        API_URL: 'http://127.0.0.1:5001/api/v0/add',
-        
-        // Option 2: Pinata IPFS (Free tier available - requires free account at pinata.cloud)
-        // Sign up at: https://pinata.cloud (free account)
-        // Get API keys from: https://app.pinata.cloud/keys
-        // Uncomment below and add your keys:
-        // API_URL: 'https://api.pinata.cloud/pinning/pinFileToIPFS',
-        // PINATA_API_KEY: 'YOUR_PINATA_API_KEY_HERE',
-        // PINATA_SECRET_KEY: 'YOUR_PINATA_SECRET_KEY_HERE',
-        
-        // Option 3: Web3.Storage (Free tier - requires API token)
-        // Sign up at: https://web3.storage (free account)
-        // Get API token and uncomment:
-        // API_URL: 'https://api.web3.storage/upload',
-        // WEB3_STORAGE_TOKEN: 'YOUR_WEB3_STORAGE_TOKEN_HERE',
-        
-        // IPFS Gateway for retrieving files
-        // Use local gateway (faster) or public gateway
-        GATEWAY: 'http://127.0.0.1:8080/ipfs/'  // Local IPFS Desktop gateway
-        // GATEWAY: 'https://ipfs.io/ipfs/'     // Public gateway (fallback)
+        // Auto-detect: use Pinata in production, local IPFS in development
+        API_URL: (_runtimeConfig.PINATA_API_KEY)
+            ? 'https://api.pinata.cloud/pinning/pinFileToIPFS'
+            : 'http://127.0.0.1:5001/api/v0/add',
+        PINATA_API_KEY: _runtimeConfig.PINATA_API_KEY || '',
+        PINATA_SECRET_KEY: _runtimeConfig.PINATA_SECRET_KEY || '',
+        GATEWAY: _runtimeConfig.IPFS_GATEWAY || 'http://127.0.0.1:8080/ipfs/'
     }
 };
 
 // User Management System (MySQL API)
 const UserManagement = {
     // Get API base URL
-    getApiBaseUrl: function() {
+    getApiBaseUrl: function () {
         return 'http://localhost:3000/api'; // Direct URL - can be changed if needed
     },
 
     // Get all users from MySQL database
-    getAllUsers: async function() {
+    getAllUsers: async function () {
         try {
             const response = await fetch(`${UserManagement.getApiBaseUrl()}/users`);
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
 
             const data = await response.json();
-            
+
             // Convert array to object format for compatibility
             const usersObj = {};
             data.users.forEach(user => {
@@ -75,7 +65,7 @@ const UserManagement = {
                     createdAt: user.createdAt
                 };
             });
-            
+
             return usersObj;
         } catch (error) {
             console.error('Error fetching users:', error);
@@ -83,9 +73,9 @@ const UserManagement = {
             return {};
         }
     },
-    
+
     // Add new user to MySQL database
-    addUser: async function(userId, password, role) {
+    addUser: async function (userId, password, role) {
         try {
             const response = await fetch(`${UserManagement.getApiBaseUrl()}/users`, {
                 method: 'POST',
@@ -112,9 +102,9 @@ const UserManagement = {
             throw error;
         }
     },
-    
+
     // Delete user from MySQL database
-    deleteUser: async function(userId) {
+    deleteUser: async function (userId) {
         try {
             const response = await fetch(`${UserManagement.getApiBaseUrl()}/users/${encodeURIComponent(userId)}`, {
                 method: 'DELETE'
@@ -133,23 +123,23 @@ const UserManagement = {
             throw error;
         }
     },
-    
+
     // Check if user exists in MySQL database
-    userExists: async function(userId) {
+    userExists: async function (userId) {
         try {
-            const response = await fetch(`${UserManagement.API_BASE_URL}/users/${encodeURIComponent(userId)}`);
+            const response = await fetch(`${UserManagement.getApiBaseUrl()}/users/${encodeURIComponent(userId)}`);
             return response.ok;
         } catch (error) {
             console.error('Error checking user:', error);
             return false;
         }
     },
-    
+
     // Get user by ID from MySQL database
-    getUser: async function(userId) {
+    getUser: async function (userId) {
         try {
-            const response = await fetch(`${UserManagement.API_BASE_URL}/users/${encodeURIComponent(userId)}`);
-            
+            const response = await fetch(`${UserManagement.getApiBaseUrl()}/users/${encodeURIComponent(userId)}`);
+
             if (!response.ok) {
                 return null;
             }
@@ -167,7 +157,7 @@ const UserManagement = {
     },
 
     // Verify user credentials (for login)
-    verifyUser: async function(userId, password, role) {
+    verifyUser: async function (userId, password, role) {
         try {
             const response = await fetch(`${UserManagement.getApiBaseUrl()}/users/verify`, {
                 method: 'POST',
@@ -197,7 +187,7 @@ const UserManagement = {
 // Login Logs Database (simulated database using localStorage)
 const LoginLogs = {
     STORAGE_KEY: 'login_logs',
-    
+
     // Log login attempt
     logLogin: (userId, role, success, ipAddress = null) => {
         const logs = LoginLogs.getAllLogs();
@@ -214,36 +204,36 @@ const LoginLogs = {
         localStorage.setItem(LoginLogs.STORAGE_KEY, JSON.stringify(logs));
         return logEntry;
     },
-    
+
     // Get all login logs
     getAllLogs: () => {
         return JSON.parse(localStorage.getItem(LoginLogs.STORAGE_KEY) || '[]');
     },
-    
+
     // Get logs by user ID
     getLogsByUser: (userId) => {
         const logs = LoginLogs.getAllLogs();
         return logs.filter(log => log.userId === userId);
     },
-    
+
     // Get successful logins
     getSuccessfulLogins: () => {
         const logs = LoginLogs.getAllLogs();
         return logs.filter(log => log.success === true);
     },
-    
+
     // Get failed logins
     getFailedLogins: () => {
         const logs = LoginLogs.getAllLogs();
         return logs.filter(log => log.success === false);
     },
-    
+
     // Get recent logs (last N entries)
     getRecentLogs: (count = 50) => {
         const logs = LoginLogs.getAllLogs();
         return logs.slice(-count).reverse();
     },
-    
+
     // Clear all logs
     clearLogs: () => {
         localStorage.removeItem(LoginLogs.STORAGE_KEY);
@@ -270,12 +260,12 @@ const Session = {
 const BlockchainStorage = {
     // Storage key for evidence records
     STORAGE_KEY: 'blockchain_evidence',
-    
+
     // Get all evidence records
     getAllEvidence: () => {
         return JSON.parse(localStorage.getItem(BlockchainStorage.STORAGE_KEY) || '[]');
     },
-    
+
     // Add evidence record
     addEvidence: (caseId, evidenceHash, ipfsCID, investigator) => {
         const evidences = BlockchainStorage.getAllEvidence();
@@ -291,7 +281,7 @@ const BlockchainStorage = {
         localStorage.setItem(BlockchainStorage.STORAGE_KEY, JSON.stringify(evidences));
         return newEvidence;
     },
-    
+
     // Get evidence by index
     getEvidence: (index) => {
         const evidences = BlockchainStorage.getAllEvidence();
@@ -300,12 +290,12 @@ const BlockchainStorage = {
         }
         return null;
     },
-    
+
     // Get evidence count
     getEvidenceCount: () => {
         return BlockchainStorage.getAllEvidence().length;
     },
-    
+
     // Get evidence by case ID
     getEvidenceByCaseId: (caseId) => {
         const evidences = BlockchainStorage.getAllEvidence();
