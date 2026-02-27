@@ -53,6 +53,7 @@ async function autoInitDatabase() {
 // Initialize on startup
 setTimeout(async () => {
     await autoInitDatabase();           // Create tables if not exist
+    await initializeDefaultUsers();     // Seed default users after tables exist
     // Only start blockchain if explicitly enabled (skip in cloud by default)
     if (process.env.BLOCKCHAIN_ENABLED === 'true') {
         await initializeBlockchain();
@@ -1669,8 +1670,7 @@ async function initializeDefaultUsers() {
     }
 }
 
-// Initialize default users on server start
-initializeDefaultUsers();
+// (Default users are seeded after DB tables are created — see startup setTimeout below)
 
 // ==================== SECURITY API ROUTES ====================
 
