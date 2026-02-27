@@ -27,11 +27,36 @@ const {
 const path = require('path');
 const fs = require('fs');
 
+// ── Auto-initialize Database Tables on Startup ──
+async function autoInitDatabase() {
+    try {
+        const initSqlPath = path.resolve(__dirname, '../database/init.sql');
+        if (!fs.existsSync(initSqlPath)) {
+            console.warn('⚠️  database/init.sql not found — skipping auto-init');
+            return;
+        }
+        const sql = fs.readFileSync(initSqlPath, 'utf8');
+        // Use multipleStatements for running the full SQL file
+        const conn = await mysql.createConnection({
+            ...config.database,
+            multipleStatements: true
+        });
+        await conn.query(sql);
+        await conn.end();
+        console.log('✅ Database tables initialized (or already exist)');
+    } catch (err) {
+        // Log but don't crash — tables may already exist
+        console.warn('⚠️  DB auto-init warning:', err.message);
+    }
+}
+
 // Initialize Blockchain History on startup
 setTimeout(async () => {
+    await autoInitDatabase();           // Create tables if not exist
     await initializeBlockchain();
     printBlockchainHistory().catch(err => console.error('Error printing blockchain history:', err.message));
 }, 3000); // Wait for connection
+
 
 const app = express();
 const PORT = config.server.port;
