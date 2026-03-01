@@ -1069,6 +1069,92 @@ app.get('/api/evidence/:id/chain-of-custody', async (req, res) => {
     }
 });
 
+// ==================== CASES OVERVIEW API ====================
+
+// Get all cases with aggregated evidence counts and derived stage
+app.get('/api/cases/overview', async (req, res) => {
+    try {
+        const [rows] = await pool.execute(
+            `SELECT
+                case_id        AS caseId,
+                MIN(investigator_id)                                              AS investigatorId,
+                COUNT(*)                                                          AS totalEvidence,
+                SUM(CASE WHEN status = 'pending'  THEN 1 ELSE 0 END)             AS pendingCount,
+                SUM(CASE WHEN status = 'verified' THEN 1 ELSE 0 END)             AS verifiedCount,
+                SUM(CASE WHEN status = 'rejected' THEN 1 ELSE 0 END)             AS rejectedCount,
+                SUM(CASE WHEN status = 'archived' THEN 1 ELSE 0 END)             AS archivedCount,
+                MAX(updated_at)                                                   AS lastUpdated,
+                DATE_FORMAT(MAX(updated_at), '%Y-%m-%d %H:%i:%s')                AS lastUpdatedReadable,
+                DATE_FORMAT(MIN(created_at), '%Y-%m-%d %H:%i:%s')                AS createdAtReadable
+            FROM evidence
+            GROUP BY case_id
+            ORDER BY MAX(updated_at) DESC`
+        );
+
+        // Derive stage for each case
+        const cases = rows.map(c => {
+            const total = parseInt(c.totalEvidence);
+            const pending = parseInt(c.pendingCount);
+            const verified = parseInt(c.verifiedCount);
+            const rejected = parseInt(c.rejectedCount);
+            const archived = parseInt(c.archivedCount);
+
+            let stage;
+            if (total === 0) {
+                stage = 'unknown';
+            } else if (archived === total) {
+                stage = 'archived';
+            } else if (verified === total) {
+                stage = 'complete';
+            } else if (verified > 0 || rejected > 0) {
+                stage = 'analyst';
+            } else {
+                stage = 'investigator';
+            }
+
+            return { ...c, stage };
+        });
+
+        res.json({ success: true, count: cases.length, cases });
+    } catch (error) {
+        console.error('Error fetching cases overview:', error);
+        res.status(500).json({ error: 'Failed to fetch cases overview', message: error.message });
+    }
+});
+
+// Get all evidence records for a specific case (for admin detail view)
+app.get('/api/cases/:caseId/evidence', async (req, res) => {
+    try {
+        const { caseId } = req.params;
+        const [rows] = await pool.execute(
+            `SELECT
+                id,
+                case_id         AS caseId,
+                file_name       AS fileName,
+                file_size       AS fileSize,
+                file_type       AS fileType,
+                evidence_hash   AS evidenceHash,
+                ipfs_cid        AS ipfsCID,
+                investigator_id AS investigatorId,
+                status,
+                description,
+                category,
+                verified_by     AS verifiedBy,
+                created_at      AS createdAt,
+                DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:%s') AS createdAtReadable,
+                updated_at      AS updatedAt
+            FROM evidence
+            WHERE case_id = ?
+            ORDER BY created_at DESC`,
+            [caseId]
+        );
+        res.json({ success: true, count: rows.length, evidence: rows });
+    } catch (error) {
+        console.error('Error fetching case evidence:', error);
+        res.status(500).json({ error: 'Failed to fetch case evidence', message: error.message });
+    }
+});
+
 // Add verification record
 app.post('/api/evidence/:id/verify', async (req, res) => {
     try {

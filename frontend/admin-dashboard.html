@@ -6,6 +6,307 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin Dashboard - Digital Forensics</title>
   <link rel="stylesheet" href="style.css">
+  <style>
+    /* ── Case Management Styles ── */
+    .case-mgmt-section {
+      margin-top: 50px;
+    }
+
+    .case-mgmt-section h2 {
+      color: #e5e7eb;
+      margin-bottom: 8px;
+      font-size: 1.6rem;
+    }
+
+    .case-mgmt-section .section-subtitle {
+      color: #9ca3af;
+      margin-bottom: 20px;
+      font-size: 0.95rem;
+    }
+
+    .case-search-bar {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .case-search-bar input {
+      flex: 1;
+      min-width: 200px;
+      padding: 10px 14px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      color: #fff;
+      font-size: 0.95rem;
+    }
+
+    .case-search-bar input:focus {
+      outline: none;
+      border-color: #2563eb;
+    }
+
+    .case-search-bar select {
+      padding: 10px 14px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      color: #fff;
+      font-size: 0.95rem;
+      cursor: pointer;
+    }
+
+    /* Stage Badges */
+    .stage-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      white-space: nowrap;
+    }
+
+    .stage-investigator {
+      background: rgba(59, 130, 246, 0.18);
+      color: #60a5fa;
+      border: 1px solid #3b82f6;
+    }
+
+    .stage-analyst {
+      background: rgba(251, 191, 36, 0.15);
+      color: #fbbf24;
+      border: 1px solid #f59e0b;
+    }
+
+    .stage-complete {
+      background: rgba(16, 185, 129, 0.15);
+      color: #10b981;
+      border: 1px solid #10b981;
+    }
+
+    .stage-archived {
+      background: rgba(156, 163, 175, 0.15);
+      color: #9ca3af;
+      border: 1px solid #6b7280;
+    }
+
+    .stage-unknown {
+      background: rgba(107, 114, 128, 0.15);
+      color: #9ca3af;
+      border: 1px solid #4b5563;
+    }
+
+    /* Cases Table */
+    .cases-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: rgba(30, 41, 59, 0.9);
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .cases-table thead {
+      background: #0f172a;
+    }
+
+    .cases-table th {
+      padding: 14px 16px;
+      text-align: left;
+      color: #60a5fa;
+      font-weight: 600;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .cases-table td {
+      padding: 13px 16px;
+      border-top: 1px solid #1e293b;
+      color: #cbd5e1;
+      font-size: 0.92rem;
+      vertical-align: middle;
+    }
+
+    .cases-table tr:hover td {
+      background: rgba(37, 99, 235, 0.06);
+    }
+
+    /* Status mini-bar */
+    .status-mini {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .status-chip {
+      font-size: 0.75rem;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-weight: 600;
+    }
+
+    .chip-pending {
+      background: rgba(251, 191, 36, 0.2);
+      color: #fbbf24;
+    }
+
+    .chip-verified {
+      background: rgba(16, 185, 129, 0.2);
+      color: #10b981;
+    }
+
+    .chip-rejected {
+      background: rgba(248, 113, 113, 0.2);
+      color: #f87171;
+    }
+
+    .chip-archived {
+      background: rgba(156, 163, 175, 0.2);
+      color: #9ca3af;
+    }
+
+    .btn-view-detail {
+      padding: 5px 14px;
+      background: #2563eb;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 600;
+      transition: background 0.2s;
+    }
+
+    .btn-view-detail:hover {
+      background: #1d4ed8;
+    }
+
+    /* Evidence Detail Panel */
+    .case-detail-row td {
+      padding: 0 !important;
+      border-top: none !important;
+    }
+
+    .case-detail-panel {
+      padding: 20px 24px;
+      background: rgba(15, 23, 42, 0.85);
+      border-top: 2px solid #2563eb;
+      border-bottom: 2px solid #1e293b;
+    }
+
+    .case-detail-panel h4 {
+      color: #60a5fa;
+      font-size: 1rem;
+      margin-bottom: 14px;
+    }
+
+    /* Progress Stage Tracker */
+    .stage-tracker {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .tracker-step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      min-width: 110px;
+    }
+
+    .tracker-dot {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      border: 2px solid #334155;
+      background: #1e293b;
+      color: #6b7280;
+      transition: all 0.3s;
+    }
+
+    .tracker-dot.active {
+      border-color: #f59e0b;
+      background: rgba(251, 191, 36, 0.15);
+      color: #fbbf24;
+    }
+
+    .tracker-dot.done {
+      border-color: #10b981;
+      background: rgba(16, 185, 129, 0.15);
+      color: #10b981;
+    }
+
+    .tracker-label {
+      font-size: 0.75rem;
+      color: #9ca3af;
+      text-align: center;
+    }
+
+    .tracker-label.active {
+      color: #fbbf24;
+      font-weight: 700;
+    }
+
+    .tracker-label.done {
+      color: #10b981;
+    }
+
+    .tracker-connector {
+      flex: 1;
+      height: 2px;
+      background: #334155;
+      min-width: 20px;
+      max-width: 60px;
+      margin-bottom: 20px;
+    }
+
+    .tracker-connector.done {
+      background: #10b981;
+    }
+
+    /* Inner evidence table */
+    .detail-evidence-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+
+    .detail-evidence-table th {
+      padding: 10px 12px;
+      text-align: left;
+      color: #94a3b8;
+      font-weight: 600;
+      border-bottom: 1px solid #334155;
+    }
+
+    .detail-evidence-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid #1e293b;
+      color: #cbd5e1;
+    }
+
+    .detail-evidence-table tr:hover td {
+      background: rgba(37, 99, 235, 0.06);
+    }
+
+    .no-cases-msg {
+      text-align: center;
+      padding: 40px;
+      color: #6b7280;
+      font-size: 1rem;
+    }
+  </style>
 </head>
 
 <body>
@@ -28,6 +329,7 @@
       <div id="userInfo" class="user-info"></div>
     </div>
 
+    <!-- Quick Action Cards -->
     <div class="dashboard-grid">
       <div class="dashboard-card">
         <h3>👥 User Management</h3>
@@ -60,6 +362,7 @@
       </div>
     </div>
 
+    <!-- System Statistics -->
     <div class="admin-section">
       <h2>System Statistics</h2>
       <div id="statistics" class="stats-grid">
@@ -89,15 +392,282 @@
         </div>
       </div>
     </div>
-  </div>
-  <script src="env-config.js"></script>
 
+    <!-- ══════════════════════════════════════════
+         CASE MANAGEMENT SECTION
+    ════════════════════════════════════════════ -->
+    <div class="case-mgmt-section">
+      <h2>📁 Case Management</h2>
+      <p class="section-subtitle">Full case details — evidence records, statuses, and the current workflow stage for
+        each case.</p>
+
+      <div class="case-search-bar">
+        <input type="text" id="caseSearchInput" placeholder="🔍 Search by Case ID..." oninput="filterCases()" />
+        <select id="stageFilter" onchange="filterCases()">
+          <option value="">All Stages</option>
+          <option value="investigator">🔵 Investigator</option>
+          <option value="analyst">🟡 Analyst</option>
+          <option value="complete">🟢 Complete</option>
+          <option value="archived">⚫ Archived</option>
+        </select>
+        <button class="btn-secondary" onclick="loadCasesOverview()" style="padding:10px 18px;">↻ Refresh</button>
+      </div>
+
+      <div id="casesContainer">
+        <p class="info">Loading cases...</p>
+      </div>
+    </div>
+
+  </div><!-- /container -->
+
+  <script src="env-config.js"></script>
   <script src="config.js"></script>
   <script src="database.js"></script>
   <script src="evidence-api.js"></script>
   <script src="enhanced-features.js"></script>
   <script src="app.js"></script>
   <script>
+    // ─── Cached cases for filtering ───
+    let allCases = [];
+
+    // ─── Stage helpers ───
+    const STAGE_META = {
+      investigator: { label: '🔵 Investigator', cls: 'stage-investigator' },
+      analyst: { label: '🟡 Analyst', cls: 'stage-analyst' },
+      complete: { label: '🟢 Complete', cls: 'stage-complete' },
+      archived: { label: '⚫ Archived', cls: 'stage-archived' },
+      unknown: { label: '⚪ Unknown', cls: 'stage-unknown' },
+    };
+
+    function stageBadge(stage) {
+      const m = STAGE_META[stage] || STAGE_META.unknown;
+      return `<span class="stage-badge ${m.cls}">${m.label}</span>`;
+    }
+
+    // ─── Stage Progress Tracker bar ───
+    function stageTracker(stage) {
+      const steps = [
+        { key: 'investigator', icon: '🔍', label: 'Investigator' },
+        { key: 'analyst', icon: '📊', label: 'Analyst' },
+        { key: 'complete', icon: '⚖️', label: 'Court / Done' },
+      ];
+      const order = ['investigator', 'analyst', 'complete'];
+      const currentIdx = order.indexOf(stage);
+
+      let html = '<div class="stage-tracker">';
+      steps.forEach((step, i) => {
+        let dotCls = '', labelCls = '';
+        if (i < currentIdx) {
+          dotCls = 'done'; labelCls = 'done';
+        } else if (i === currentIdx) {
+          dotCls = 'active'; labelCls = 'active';
+        }
+        html += `
+          <div class="tracker-step">
+            <div class="tracker-dot ${dotCls}">${step.icon}</div>
+            <span class="tracker-label ${labelCls}">${step.label}</span>
+          </div>`;
+        if (i < steps.length - 1) {
+          const connDone = i < currentIdx ? 'done' : '';
+          html += `<div class="tracker-connector ${connDone}"></div>`;
+        }
+      });
+      html += '</div>';
+      return html;
+    }
+
+    // ─── Format file size ───
+    function fmtSize(bytes) {
+      if (!bytes) return '-';
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / 1048576).toFixed(1) + ' MB';
+    }
+
+    // ─── Load Cases Overview ───
+    async function loadCasesOverview() {
+      const container = document.getElementById('casesContainer');
+      container.innerHTML = '<p class="info">Loading cases...</p>';
+      try {
+        const res = await fetch(`${CONFIG.API.BASE_URL}/cases/overview`);
+        const data = await res.json();
+        allCases = data.cases || [];
+        renderCasesTable(allCases);
+      } catch (err) {
+        container.innerHTML = `<p class="error">Failed to load cases: ${err.message}</p>`;
+        console.error('Error loading cases:', err);
+      }
+    }
+
+    // ─── Filter cases by search and stage ───
+    function filterCases() {
+      const query = document.getElementById('caseSearchInput').value.toLowerCase().trim();
+      const stage = document.getElementById('stageFilter').value;
+      const filtered = allCases.filter(c => {
+        const matchId = !query || c.caseId.toLowerCase().includes(query);
+        const matchStage = !stage || c.stage === stage;
+        return matchId && matchStage;
+      });
+      renderCasesTable(filtered);
+    }
+
+    // ─── Render the cases summary table ───
+    function renderCasesTable(cases) {
+      const container = document.getElementById('casesContainer');
+      if (!cases || cases.length === 0) {
+        container.innerHTML = '<div class="no-cases-msg">📂 No cases found.</div>';
+        return;
+      }
+
+      let html = `
+        <table class="cases-table" id="casesTable">
+          <thead>
+            <tr>
+              <th>Case ID</th>
+              <th>Investigator</th>
+              <th>Total</th>
+              <th>Evidence Status</th>
+              <th>Current Stage</th>
+              <th>Last Updated</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>`;
+
+      cases.forEach(c => {
+        const details = [];
+        if (parseInt(c.pendingCount) > 0) details.push(`<span class="status-chip chip-pending">⏳ ${c.pendingCount} Pending</span>`);
+        if (parseInt(c.verifiedCount) > 0) details.push(`<span class="status-chip chip-verified">✅ ${c.verifiedCount} Verified</span>`);
+        if (parseInt(c.rejectedCount) > 0) details.push(`<span class="status-chip chip-rejected">❌ ${c.rejectedCount} Rejected</span>`);
+        if (parseInt(c.archivedCount) > 0) details.push(`<span class="status-chip chip-archived">📦 ${c.archivedCount} Archived</span>`);
+
+        html += `
+          <tr>
+            <td><strong style="color:#e5e7eb;">${c.caseId}</strong></td>
+            <td>${c.investigatorId || '-'}</td>
+            <td style="text-align:center; font-size:1.1rem; font-weight:700;">${c.totalEvidence}</td>
+            <td><div class="status-mini">${details.join('') || '-'}</div></td>
+            <td>${stageBadge(c.stage)}</td>
+            <td style="font-size:0.83rem; color:#94a3b8;">${c.lastUpdatedReadable || c.createdAtReadable || '-'}</td>
+            <td>
+              <button class="btn-view-detail" onclick="toggleCaseDetail('${c.caseId}', this)">
+                View Details
+              </button>
+            </td>
+          </tr>
+          <tr class="case-detail-row" id="detail-${CSS.escape(c.caseId)}" style="display:none;">
+            <td colspan="7">
+              <div class="case-detail-panel" id="panel-${CSS.escape(c.caseId)}">
+                <p class="info">Loading evidence...</p>
+              </div>
+            </td>
+          </tr>`;
+      });
+
+      html += '</tbody></table>';
+      container.innerHTML = html;
+    }
+
+    // ─── Toggle case detail row ───
+    async function toggleCaseDetail(caseId, btn) {
+      const escapedId = CSS.escape(caseId);
+      const detailRow = document.getElementById(`detail-${escapedId}`);
+      const panel = document.getElementById(`panel-${escapedId}`);
+
+      if (detailRow.style.display !== 'none') {
+        detailRow.style.display = 'none';
+        btn.textContent = 'View Details';
+        return;
+      }
+
+      detailRow.style.display = 'table-row';
+      btn.textContent = 'Hide Details';
+
+      try {
+        const res = await fetch(`${CONFIG.API.BASE_URL}/cases/${encodeURIComponent(caseId)}/evidence`);
+        const data = await res.json();
+        const evList = data.evidence || [];
+
+        // Find stage from cached allCases
+        const caseObj = allCases.find(c => c.caseId === caseId) || {};
+
+        let html = `
+          <h4>📁 Case: <span style="color:#e5e7eb;">${caseId}</span>
+              &nbsp;— ${stageBadge(caseObj.stage || 'unknown')}</h4>`;
+
+        // Stage tracker (only show for non-archived/complete)
+        if (caseObj.stage !== 'archived') {
+          html += stageTracker(caseObj.stage || 'unknown');
+        }
+
+        if (evList.length === 0) {
+          html += '<p style="color:#9ca3af;">No evidence records found for this case.</p>';
+        } else {
+          html += `
+            <table class="detail-evidence-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>File Name</th>
+                  <th>Size</th>
+                  <th>SHA-256 Hash</th>
+                  <th>IPFS CID</th>
+                  <th>Uploaded By</th>
+                  <th>Category</th>
+                  <th>Status</th>
+                  <th>Verified By</th>
+                  <th>Uploaded At</th>
+                </tr>
+              </thead>
+              <tbody>`;
+
+          evList.forEach(e => {
+            const statusColors = {
+              pending: '#fbbf24',
+              verified: '#10b981',
+              rejected: '#f87171',
+              archived: '#9ca3af'
+            };
+            const sc = statusColors[e.status] || '#9ca3af';
+
+            const hashShort = e.evidenceHash ? e.evidenceHash.substring(0, 14) + '…' : '-';
+            const cidShort = e.ipfsCID ? e.ipfsCID.substring(0, 14) + '…' : '-';
+            const cidLink = e.ipfsCID
+              ? `<a href="${CONFIG.IPFS.GATEWAY}${e.ipfsCID}" target="_blank" title="${e.ipfsCID}"
+                   style="color:#38bdf8; text-decoration:none; font-family:monospace;">${cidShort}</a>`
+              : '-';
+
+            html += `
+              <tr>
+                <td style="color:#64748b;">#${e.id}</td>
+                <td style="color:#e5e7eb; max-width:160px; word-break:break-word;">${e.fileName}</td>
+                <td>${fmtSize(e.fileSize)}</td>
+                <td class="hash-cell" title="${e.evidenceHash}" style="font-family:monospace; color:#38bdf8;">${hashShort}</td>
+                <td>${cidLink}</td>
+                <td>${e.investigatorId || '-'}</td>
+                <td>${e.category || '-'}</td>
+                <td><span style="color:${sc}; font-weight:700;">${e.status}</span></td>
+                <td>${e.verifiedBy || '—'}</td>
+                <td style="font-size:0.82rem; color:#94a3b8;">${e.createdAtReadable || '-'}</td>
+              </tr>`;
+          });
+
+          html += '</tbody></table>';
+
+          // Summary line
+          html += `<p style="margin-top:12px; font-size:0.85rem; color:#6b7280;">
+            Total: ${evList.length} evidence record(s) for case <strong style="color:#94a3b8">${caseId}</strong>
+          </p>`;
+        }
+
+        panel.innerHTML = html;
+      } catch (err) {
+        panel.innerHTML = `<p class="error">Failed to load evidence: ${err.message}</p>`;
+        console.error('Error loading case evidence:', err);
+      }
+    }
+
+    // ─── System Overview ───
     async function loadSystemOverview() {
       const overviewDiv = document.getElementById('systemOverview');
       try {
@@ -115,10 +685,10 @@
         `;
       } catch (error) {
         overviewDiv.innerHTML = `<p class="error">Error loading overview: ${error.message}</p>`;
-        console.error('Error loading system overview:', error);
       }
     }
 
+    // ─── Statistics ───
     async function loadStatistics() {
       try {
         const evidenceStats = await EvidenceAPI.getStatistics();
@@ -132,23 +702,17 @@
         document.getElementById('systemStatus').innerHTML = '<span class="success">✓ Operational</span>';
       } catch (error) {
         console.error('Error loading statistics:', error);
-        document.getElementById('totalEvidence').textContent = '-';
-        document.getElementById('activeUsers').textContent = '-';
-        document.getElementById('verifiedEvidence').textContent = '-';
-        document.getElementById('pendingEvidence').textContent = '-';
-        document.getElementById('uniqueCases').textContent = '-';
+        ['totalEvidence', 'activeUsers', 'verifiedEvidence', 'pendingEvidence', 'uniqueCases']
+          .forEach(id => { document.getElementById(id).textContent = '-'; });
         document.getElementById('systemStatus').innerHTML = '<span class="error">✗ Error</span>';
       }
     }
 
-    function viewEvidenceStats() {
-      // Could navigate to a detailed statistics page or show modal
-      alert('Detailed statistics feature - Coming soon!\n\nCurrent stats:\n- Total Evidence\n- Verified/Pending/Rejected\n- Top Investigators\n- Top Cases');
-    }
-
+    // ─── Init ───
     document.addEventListener('DOMContentLoaded', async function () {
       await loadSystemOverview();
       await loadStatistics();
+      await loadCasesOverview();
     });
   </script>
 </body>
