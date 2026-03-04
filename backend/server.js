@@ -1987,5 +1987,123 @@ app.listen(PORT, () => {
 //     process.exit(0);
 // });
 
+
+// ==================== DEMO DATA SEEDER ====================
+
+// POST /api/demo/seed — inserts demo cases for project presentation
+app.post('/api/demo/seed', async (req, res) => {
+    try {
+        // Check if demo data already exists
+        const [existing] = await pool.execute(
+            "SELECT COUNT(*) as cnt FROM evidence WHERE case_id IN ('CASE-DEMO-2026','CASE-PENDING-001')"
+        );
+        if (parseInt(existing[0].cnt) > 0) {
+            return res.json({ success: true, message: 'Demo data already exists', seeded: false });
+        }
+
+        // ── Solved Demo Case: CASE-DEMO-2026 (all verified) ──
+        const solvedRecords = [
+            {
+                case_id: 'CASE-DEMO-2026',
+                file_name: 'crime_scene_photo_01.jpg',
+                file_size: 3145728,
+                file_type: 'image/jpeg',
+                evidence_hash: 'a3f8d2c14e9b7065f2a1c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4',
+                ipfs_cid: 'QmXoypizjW3WknFiJnKLwHCnL72vedxjQkDDP1mXWo6uco',
+                investigator_id: 'investigator1',
+                status: 'verified',
+                description: 'Primary crime scene photograph showing entry point',
+                category: 'Image Evidence',
+                tags: 'crime-scene,photo,primary',
+                verified_by: 'analyst1'
+            },
+            {
+                case_id: 'CASE-DEMO-2026',
+                file_name: 'digital_forensics_report.pdf',
+                file_size: 1048576,
+                file_type: 'application/pdf',
+                evidence_hash: 'b4e9c3d25f0a8176g3b2d4e5f6a7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5',
+                ipfs_cid: 'QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG',
+                investigator_id: 'investigator1',
+                status: 'verified',
+                description: 'Full forensic analysis report by lead investigator',
+                category: 'Case Report',
+                tags: 'report,forensics,analysis',
+                verified_by: 'analyst1'
+            },
+            {
+                case_id: 'CASE-DEMO-2026',
+                file_name: 'device_memory_dump.bin',
+                file_size: 8388608,
+                file_type: 'application/octet-stream',
+                evidence_hash: 'c5d0e4f36a1b9287h4c3e5f6a7b8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6',
+                ipfs_cid: 'QmZ4tDuvesekSs4qM5ZBmpkwb3V9tY9wbU5BKTV3FtYnxx',
+                investigator_id: 'investigator1',
+                status: 'verified',
+                description: 'RAM dump from suspect device — extracted digital artifacts',
+                category: 'Digital Evidence',
+                tags: 'memory,dump,device,digital',
+                verified_by: 'court1'
+            }
+        ];
+
+        // ── Pending Demo Case: CASE-PENDING-001 (all pending) ──
+        const pendingRecords = [
+            {
+                case_id: 'CASE-PENDING-001',
+                file_name: 'surveillance_video.mp4',
+                file_size: 52428800,
+                file_type: 'video/mp4',
+                evidence_hash: 'd6e1f5a47b2c0398i5d4f6a7b8c9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7',
+                ipfs_cid: 'QmPchSXTVtEqDvXFbBjMFVxNfTjCh9VkzaHQbBXVfUyHXN',
+                investigator_id: 'investigator1',
+                status: 'pending',
+                description: 'CCTV footage from incident location — awaiting analysis',
+                category: 'Video Evidence',
+                tags: 'cctv,video,surveillance',
+                verified_by: null
+            },
+            {
+                case_id: 'CASE-PENDING-001',
+                file_name: 'call_records_log.csv',
+                file_size: 204800,
+                file_type: 'text/csv',
+                evidence_hash: 'e7f2a6b58c3d1409j6e5a7b8c9d0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8',
+                ipfs_cid: 'QmNLei78zWmzUdbeRB3CiUfAizWUrbeeZh5K1rhAQKCh51',
+                investigator_id: 'investigator1',
+                status: 'pending',
+                description: 'Phone call logs extracted from suspect device',
+                category: 'Digital Evidence',
+                tags: 'calls,logs,phone,digital',
+                verified_by: null
+            }
+        ];
+
+        const inserted = [];
+        for (const rec of [...solvedRecords, ...pendingRecords]) {
+            const [r] = await pool.execute(
+                `INSERT INTO evidence
+                    (case_id, file_name, file_size, file_type, evidence_hash, ipfs_cid,
+                     investigator_id, status, description, category, tags, verified_by)
+                 VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+                [rec.case_id, rec.file_name, rec.file_size, rec.file_type,
+                 rec.evidence_hash, rec.ipfs_cid, rec.investigator_id,
+                 rec.status, rec.description, rec.category, rec.tags, rec.verified_by]
+            );
+            inserted.push({ id: r.insertId, case_id: rec.case_id, file: rec.file_name });
+        }
+
+        res.json({
+            success: true,
+            message: 'Demo data seeded successfully',
+            seeded: true,
+            records: inserted
+        });
+    } catch (error) {
+        console.error('Error seeding demo data:', error);
+        res.status(500).json({ error: 'Failed to seed demo data', message: error.message });
+    }
+});
+
 console.log('DEBUG: Reached end of server.js');
 
