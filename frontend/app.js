@@ -242,7 +242,7 @@ async function uploadEvidence() {
     const category = document.getElementById("category")?.value || null;
     const tags = document.getElementById("tags")?.value.trim() || null;
     const description = document.getElementById("description")?.value.trim() || null;
-    const encryptFile = document.getElementById("encryptFile")?.checked || false;
+    const encryptFile = false; // Encryption feature removed per user request
 
     if (!files || files.length === 0) {
         statusDiv.innerHTML = "<p class='error'>Please select at least one file</p>";
@@ -254,15 +254,36 @@ async function uploadEvidence() {
         return;
     }
 
+    if (!category) {
+        statusDiv.innerHTML = "<p class='error'>Please select a category for the evidence</p>";
+        return;
+    }
+
+    // Validate file formats against category
+    const categoryFormats = {
+        'Document': ['pdf', 'doc', 'docx', 'txt', 'csv', 'xlsx', 'ppt', 'pptx'],
+        'Image': ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp'],
+        'Video': ['mp4', 'avi', 'mkv', 'mov', 'wmv'],
+        'Audio': ['mp3', 'wav', 'ogg', 'flac', 'm4a', 'aac'],
+        'Database': ['sql', 'db', 'sqlite', 'bak', 'mdf'],
+        'Network': ['pcap', 'pcapng', 'cap'],
+        'Mobile': ['ipsw', 'bin', 'ab', 'apk', 'ipa']
+    };
+
+    if (categoryFormats[category]) {
+        for (let i = 0; i < files.length; i++) {
+            const ext = files[i].name.split('.').pop().toLowerCase();
+            if (!categoryFormats[category].includes(ext)) {
+                statusDiv.innerHTML = `<p class='error'>File format error: "${files[i].name}" is not a valid ${category} format.<br>Allowed formats for ${category} are: .${categoryFormats[category].join(', .')}</p>`;
+                return;
+            }
+        }
+    }
+
     // Process multiple files
     const user = Session.getCurrentUser();
     const investigator = user ? user.userId : 'Unknown';
     let encryptionKey = null;
-
-    if (encryptFile) {
-        encryptionKey = EnhancedFeatures.generateEncryptionKey();
-        statusDiv.innerHTML = "<p class='info'>Encryption key generated. Keep it safe!</p>";
-    }
 
     // Upload each file
     for (let i = 0; i < files.length; i++) {

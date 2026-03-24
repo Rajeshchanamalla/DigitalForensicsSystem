@@ -275,7 +275,8 @@
           fileName: evidence.fileName,
           timestamp: evidence.createdAtReadable || new Date(evidence.createdAt).toLocaleString(),
           investigator: evidence.investigatorId,
-          status: evidence.status
+          status: evidence.status,
+          category: evidence.category
         };
 
         displayEvidence(evidence);
@@ -347,6 +348,28 @@
       if (!currentBlockchainEvidence) {
         alert('Please load evidence first');
         return;
+      }
+
+      // Format validation based on original category
+      if (currentBlockchainEvidence.category) {
+        const categoryFormats = {
+          'Document': ['pdf', 'doc', 'docx', 'txt', 'csv', 'xlsx', 'ppt', 'pptx'],
+          'Image': ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp'],
+          'Video': ['mp4', 'avi', 'mkv', 'mov', 'wmv'],
+          'Audio': ['mp3', 'wav', 'ogg', 'flac', 'm4a', 'aac'],
+          'Database': ['sql', 'db', 'sqlite', 'bak', 'mdf'],
+          'Network': ['pcap', 'pcapng', 'cap'],
+          'Mobile': ['ipsw', 'bin', 'ab', 'apk', 'ipa']
+        };
+
+        const category = currentBlockchainEvidence.category;
+        if (categoryFormats[category]) {
+          const ext = file.name.split('.').pop().toLowerCase();
+          if (!categoryFormats[category].includes(ext)) {
+            alert(`File format error: "${file.name}" is not a valid ${category} format.\nAllowed formats for ${category} are: .${categoryFormats[category].join(', .')}`);
+            return;
+          }
+        }
       }
 
       try {

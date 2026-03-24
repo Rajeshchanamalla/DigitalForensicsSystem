@@ -39,7 +39,7 @@
         <p>Upload and Manage Final Case Documentation</p>
         <div class="upload-mini-form">
           <input type="text" id="reportCaseId" placeholder="Case ID (e.g. CASE-001)" class="form-control mb-2">
-          <input type="file" id="reportFile" class="form-control mb-2">
+          <input type="file" id="reportFile" class="form-control mb-2" accept=".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
           <button onclick="uploadCaseReport()" class="btn-primary" style="width: 100%">Upload Report</button>
           <div id="reportStatus" class="status-message"></div>
         </div>
@@ -143,6 +143,13 @@
 
       if (!caseId || !file) {
         statusDiv.innerHTML = '<p class="error">Please enter Case ID and select a file.</p>';
+        return;
+      }
+
+      const allowedExtensions = ['doc', 'docx'];
+      const fileExtension = file.name.split('.').pop().toLowerCase();
+      if (!allowedExtensions.includes(fileExtension)) {
+        statusDiv.innerHTML = '<p class="error">Invalid format. Only .doc and .docx files are allowed for Case Reports.</p>';
         return;
       }
 
