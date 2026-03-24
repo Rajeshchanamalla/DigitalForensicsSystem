@@ -1,0 +1,14 @@
+r," t ansaction_id,date,time,amount_inr,sender_account,receiver_account,receiver_bank,receiver_ "
+" branch,status,flagged ",
+" TXN20241014001,2024-10-14,14:22:11,15000,VICTIM-SBI-RANAGHAT,3812XXXXXX21,SB ",
+","," I Pune,Completed,YES-MuleAccount "
+" TXN20241015002,2024-10-15,16:45:33,1800000,VICTIM-SBI-RANAGHAT,4421XXXXXX88,HD ",
+" FC,Ahmedabad,Completed,YES-MuleAccount ",
+" TXN20241016003,2024-10-16,11:30:55,1200000,VICTIM-SBI-RANAGHAT,5531XXXXXX44,Axi ",
+" s Bank,Jaipur,Completed,YES-MuleAccount ",
+" TXN20241016004,2024-10-16,15:10:22,2000000,VICTIM-SBI-RANAGHAT,6612XXXXXX03,PN ",
+" B,Rohtak,Completed,YES-MuleAccount ",
+" TXN20241017005,2024-10-17,10:05:44,2200000,VICTIM-SBI-RANAGHAT,7821XXXXXX17,Kot ",
+" ak,Mumbai,Completed,YES-MuleAccount ",
+" TXN20241018006,2024-10-18,09:45:17,1300000,VICTIM-SBI-RANAGHAT,8891XXXXXX92,Ye ",
+" s Bank,Surat,Completed,YES-MuleAccount ",

@@ -1,0 +1,40 @@
+CELLEBRITE UFED EXTRACTION REPORT
+===================================
+Lab              : SCRB Digital Forensics Lab, Kolkata
+Case ID          : CYBERCRIME-WB-2025
+Extraction Date  : November 22–25, 2024
+Tool Used        : Cellebrite UFED 4PC v7.68
+Examiner         : Sub-Inspector Amit Das, Digital Forensics Unit
+
+DEVICE 1 — Accused: Arjun Sharma (Arrested: Pune, Maharashtra)
+--------------------------------------------------------------
+Device Model   : Samsung Galaxy A54
+IMEI           : 35XXXXXXXX88241
+SHA-256 Hash   : 3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b
+Extraction Type: Full File System
+
+Key Artifacts Found:
+- WhatsApp/Databases/msgstore.db — 847 messages recovered (including 312 deleted)
+- Recovered script file: "police_script_v3.txt" — instructions for impersonating officers
+- Image folder: 14 fake Mumbai Police ID card images (JPG format)
+- Contact list with 127 victim names, numbers, and target amounts
+- Crypto wallet app: Binance — USDT TRC20 address: TXxxxxxxxxxxxxxxxxxxxxxxxxx41
+
+DEVICE 2 — Accused: Ravi Patel (Arrested: Ahmedabad, Gujarat)
+------------------------------------------------------------
+Device Model   : Redmi Note 12
+IMEI           : 86XXXXXXXX44512
+SHA-256 Hash   : 4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c
+Extraction Type: Full File System
+
+Key Artifacts Found:
+- WhatsApp call logs matching victim's call records (cross-verified)
+- Bank mule account credentials stored in Notes app (plaintext)
+- Victim transaction confirmation screenshots — 23 images recovered
+
+HASH VERIFICATION
+-----------------
+All extracted images SHA-256 verified at extraction and at lab intake.
+No changes detected — evidence integrity confirmed.
+Certified by: Sub-Inspector Amit Das
+Court Submission: Kalyani Sessions Court — December 2024
