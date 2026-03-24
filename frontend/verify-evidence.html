@@ -460,13 +460,21 @@
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `evidence_${window.currentIPFSCID.substring(0, 10)}.bin`;
+        
+        let downloadName = `evidence_${window.currentIPFSCID.substring(0, 10)}.bin`;
+        // Check if we have original filename in our loaded evidence record
+        if (typeof currentBlockchainEvidence !== 'undefined' && currentBlockchainEvidence && currentBlockchainEvidence.fileName) {
+            downloadName = currentBlockchainEvidence.fileName;
+        }
+        
+        a.download = downloadName;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         window.URL.revokeObjectURL(url);
 
         alert('File downloaded successfully from IPFS!');
+        statusDiv.innerHTML = '<p class="success">Download complete.</p>';
       } catch (error) {
         alert('Error downloading file: ' + error.message);
         console.error('Download error:', error);
