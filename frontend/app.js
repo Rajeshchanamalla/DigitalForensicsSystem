@@ -264,7 +264,7 @@ async function uploadEvidence() {
         'Document': ['pdf', 'doc', 'docx', 'txt', 'csv', 'xlsx', 'ppt', 'pptx'],
         'Image': ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp'],
         'Video': ['mp4', 'avi', 'mkv', 'mov', 'wmv'],
-        'Audio': ['mp3', 'wav', 'ogg', 'flac', 'm4a', 'aac', 'mpej'],
+        'Audio': ['mp3', 'wav', 'ogg', 'flac', 'm4a', 'aac', 'mpeg'],
         'Database': ['sql', 'db', 'sqlite', 'bak', 'mdf'],
         'Network': ['pcap', 'pcapng', 'cap'],
         'Mobile': ['ipsw', 'bin', 'ab', 'apk', 'ipa']
