@@ -1,21 +1,212 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Login - Digital Forensic Evidence Management</title>
   <link rel="stylesheet" href="style.css">
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 30px 20px;
+    }
+
+    /* ── Wrapper ── */
+    .login-wrapper {
+      width: 100%;
+      max-width: 600px;
+    }
+
+    /* ── Header above the card ── */
+    .login-header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .login-header .brand-icon {
+      font-size: 3.2rem;
+      display: block;
+      margin-bottom: 12px;
+      filter: drop-shadow(0 0 18px rgba(96, 165, 250, 0.7));
+      animation: iconPulse 2.5s ease-in-out infinite;
+    }
+
+    @keyframes iconPulse {
+
+      0%,
+      100% {
+        filter: drop-shadow(0 0 14px rgba(96, 165, 250, 0.6));
+      }
+
+      50% {
+        filter: drop-shadow(0 0 28px rgba(96, 165, 250, 1));
+      }
+    }
+
+    .login-header h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #e5e7eb;
+      margin-bottom: 8px;
+      letter-spacing: -0.3px;
+    }
+
+    .login-header .subtitle {
+      font-size: 1rem;
+      color: #64748b;
+    }
+
+    /* ── Card ── */
+    .login-form {
+      background: linear-gradient(145deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.95));
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(96, 165, 250, 0.18);
+      padding: 48px 52px;
+      border-radius: 20px;
+      box-shadow:
+        0 0 0 1px rgba(96, 165, 250, 0.08),
+        0 20px 60px rgba(0, 0, 0, 0.55),
+        0 0 80px rgba(37, 99, 235, 0.08);
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .login-form h2 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #f1f5f9;
+      margin-bottom: 32px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .login-form h2::before {
+      content: '';
+      display: inline-block;
+      width: 4px;
+      height: 24px;
+      background: linear-gradient(to bottom, #2563eb, #60a5fa);
+      border-radius: 4px;
+    }
+
+    /* ── Form Groups ── */
+    .form-group {
+      margin-bottom: 24px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 9px;
+      color: #94a3b8;
+      font-size: 0.9rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .form-group input[type="text"],
+    .form-group input[type="password"],
+    .form-group select,
+    .role-select {
+      width: 100%;
+      padding: 15px 18px;
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(71, 85, 105, 0.6);
+      border-radius: 10px;
+      color: #f1f5f9;
+      font-size: 1rem;
+      transition: border-color 0.25s, box-shadow 0.25s;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus,
+    .role-select:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+    }
+
+    .form-group input::placeholder {
+      color: #475569;
+    }
+
+    /* ── Login Button ── */
+    .login-btn {
+      width: 100%;
+      padding: 16px;
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      border: none;
+      border-radius: 10px;
+      color: #fff;
+      font-size: 1.05rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: all 0.25s;
+      box-shadow: 0 4px 18px rgba(37, 99, 235, 0.4);
+    }
+
+    .login-btn:hover {
+      background: linear-gradient(135deg, #1d4ed8, #1e40af);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 28px rgba(37, 99, 235, 0.5);
+    }
+
+    .login-btn:active {
+      transform: translateY(0);
+    }
+
+    /* ── Error ── */
+    #error {
+      margin-top: 18px;
+      font-size: 0.9rem;
+    }
+
+    /* ── Security badges below card ── */
+    .security-badges {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin-top: 24px;
+      flex-wrap: wrap;
+    }
+
+    .sec-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #475569;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
+    .sec-badge span.icon {
+      font-size: 1rem;
+    }
+  </style>
 </head>
+
 <body>
-  <div class="container">
+  <div class="login-wrapper">
+
+    <!-- Header -->
     <div class="login-header">
-      <h1>🔒 Digital Forensic Evidence Management</h1>
-      <p class="subtitle">Digital Forensic Evidence Management System</p>
+      <span class="brand-icon">🔒</span>
+      <h1>Digital Forensic Evidence Management</h1>
+      <p class="subtitle">Secure · Immutable · Blockchain-Verified</p>
     </div>
 
+    <!-- Card -->
     <div class="login-form">
       <h2>User Login</h2>
-      
+
       <div class="form-group">
         <label for="userid">User ID</label>
         <input type="text" id="userid" placeholder="Enter your user ID" autocomplete="username">
@@ -30,33 +221,32 @@
         <label for="role">Select Role</label>
         <select id="role" class="role-select">
           <option value="">-- Select Role --</option>
-          <option value="investigator"> Investigator</option>
-          <option value="analyst"> Analyst</option>
-          <option value="court"> Court</option>
-          <option value="admin"> Admin</option>
+          <option value="investigator">🔍 Investigator</option>
+          <option value="analyst">📊 Analyst</option>
+          <option value="court">⚖️ Court</option>
+          <option value="admin">🛡️ Admin</option>
         </select>
       </div>
 
-      <button onclick="login()" class="btn-primary">Login</button>
+      <button onclick="login()" class="login-btn">Login →</button>
 
       <p id="error" class="error-message"></p>
-
-      <div class="demo-info">
-        <p><strong>Demo Credentials:</strong></p>
-        <ul>
-          <li>Investigator: investigator1 / invest123</li>
-          <li>Analyst: analyst1 / analyst123</li>
-          <li>Court: court1 / court123</li>
-          <li>Admin: admin1 / admin123</li>
-        </ul>
-      </div>
     </div>
-  </div>
-  <script src="env-config.js"></script>
 
+    <!-- Security Badges -->
+    <div class="security-badges">
+      <span class="sec-badge"><span class="icon">🔐</span> AES-256 Encrypted</span>
+      <span class="sec-badge"><span class="icon">⛓️</span> Blockchain Secured</span>
+      <span class="sec-badge"><span class="icon">🛡️</span> SHA-256 Verified</span>
+    </div>
+
+  </div>
+
+  <script src="env-config.js"></script>
   <script src="config.js"></script>
   <script src="database.js"></script>
   <script src="enhanced-features.js"></script>
   <script src="app.js"></script>
 </body>
+
 </html>
